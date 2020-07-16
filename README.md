@@ -1,2 +1,2 @@
 # Aviation
-code cleared for takeoff
+code cleared for test flight takeoff
