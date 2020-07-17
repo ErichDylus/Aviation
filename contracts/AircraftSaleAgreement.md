@@ -1,5 +1,7 @@
 // draft aircraft sale agreement template drafted in OpenLaw's markup 
+
 // for demonstration purposes only, not for commercial or any other use nor to be construed as any legal or financial advice
+
 // see: https://lib.openlaw.io/web/default/template/Aircraft%20Sale%20Agreement
 
 <%
