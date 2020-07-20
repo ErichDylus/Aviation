@@ -8,7 +8,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 // **********WORK IN PROGRESS / DEMONSTRATION PURPOSES ONLY -- USE AT OWN RISK**********
 // @dev: create an ERC721 standard NFT for an N-registered aircraft, for purposes of the FAA Registry
 // contract owner would theoretically be the FAA, who could burn NFTs upon deregistration/N-number change/owner change, etc.
-// as currently written, anyone may create an NFT for demonstration purposes (for >= 0.01 ETH), but adding onlyOwner modifier would restrict minting to the contract owner (FAA)
+// currently, anyone may create an NFT for demonstration purposes (for >= 0.01 ETH), but adding onlyOwner modifier would restrict minting to the contract owner (FAA)
 
 contract FAARegistryToken is ERC721, Ownable {
 
@@ -83,7 +83,7 @@ contract FAARegistryToken is ERC721, Ownable {
     return(newAircraftId, i);
   }
   
-  // return aircraft details based on i number (must be inputted by searcher and remains viewable after corresponding token burned, for now)
+  // @dev return aircraft details based on i number (must be inputted by searcher and remains viewable after corresponding token burned, for now)
   function aircraftDetails(uint _i) public view returns(address, string memory, string memory, uint, bool, bool) {
     Aircraft storage regToken = aircraft[_i];
     return (
@@ -98,7 +98,8 @@ contract FAARegistryToken is ERC721, Ownable {
   
   // @dev buy a new FAA NFT for at least .01 ether (calls createAircraft() with given details)
   // may be purchased by any address for demonstration purposes, but could include onlyOwner to permit only the registry to create tokens, or require(whitelisted address)
-  // if onlyOwner is used, need to change the address in _createAircraft call from msg.sender to the aircraft owner's address, as the Registry would be msg.sender
+  // if onlyOwner is used in future:
+  // (1) change address in _createAircraft call from msg.sender to aircraft owner's address, (Registry would be msg.sender), and (2) could remove payment requirement
   function buyRegToken(
         string calldata _model, 
         string calldata _nNumber, 
