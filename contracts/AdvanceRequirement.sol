@@ -34,7 +34,8 @@ contract Requirement is Ownable {
         favored[_addr] = false;
     }
       
-    //view whitelisted favored party addresses
+    //view whitelisted favored party addresses (NOTE: if favored status revoked, address will remain in whitelist)
+    //will use for loop to iterate through whitelist array, find where address is indexed, and delete
     function viewWhitelist() public view returns(address[] memory) {
         return whitelist;
     }
