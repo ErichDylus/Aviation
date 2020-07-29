@@ -2,13 +2,12 @@ pragma solidity ^0.6.0;
 
 //in process, not recommended to be used for any purpose
 //@dev create a smart escrow contract for purposes of an aircraft sale transaction
-//escrow agent creates contract with submitted deposit (parties would directly pay deposit as escrow fee to agent separately, upon engagement)
-//higher deposit requested by seller could be addressed in sendFunds()
+//buyer or escrow agent creates contract with submitted deposit, amount and terms determined in offchain negotiations/documentation
 
 contract EscrowFactory {
     address[] public deployedEscrows;
     
-    //buyer creates new escrow contract by submitting deposit
+    //buyer or agent creates new escrow contract by submitting deposit amount
     function createEscrow(uint deposit, uint price) public payable {
         require(msg.value >= deposit);
         address newEscrow = address(new Escrow(deposit, price, msg.sender));
@@ -56,9 +55,11 @@ contract Escrow {
       price = _price;
   }
   
-  //amount will need to ultimately == total purchase price - deposit TODO: anyone contributing enough money would become a party
+  //amount sent needs to == total purchase price - deposit, either in one transfer or in chunks larger than deposit
+  //in practice, sending total purchase amount would likely happen immediately before closeDeal()
+  //TODO: anyone contributing enough money would become a party, might need to gate
   function sendFunds() public payable {
-      require(msg.value >= price - deposit);
+      require(msg.value >= deposit);
       //if sending funds, include as party to transaction (likely buyer or financier)
       parties[msg.sender] = true;
       approversCount++;
