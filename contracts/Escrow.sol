@@ -7,9 +7,9 @@ pragma solidity ^0.6.0;
 contract EscrowFactory {
     address[] public deployedEscrows;
     
-    //buyer or agent creates new escrow contract by submitting deposit amount
+    //buyer or agent creates new escrow contract by submitting deposit and price amount
     function createEscrow(uint deposit, uint price) public payable {
-        require(msg.value >= deposit);
+        require(msg.value >= deposit * 1 ether);
         address newEscrow = address(new Escrow(deposit, price, msg.sender));
         deployedEscrows.push(newEscrow);
     }
@@ -53,6 +53,8 @@ contract Escrow {
       agent = creator;
       deposit = _deposit;
       price = _price;
+      parties[agent] = true;
+      approversCount++;
   }
   
   //amount sent needs to == total purchase price - deposit, either in one transfer or in chunks larger than deposit
