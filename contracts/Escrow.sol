@@ -25,6 +25,7 @@ contract Escrow {
   struct InEscrow {
       string description;
       uint price;
+      uint deposit;
       address payable recipient;
       bool complete;
       uint approvalCount;
@@ -32,11 +33,12 @@ contract Escrow {
   }
   
   InEscrow[] public escrows;
-  address public agent;
+  address payable agent;
   address escrowAddress = address(this);
   uint price;
   uint deposit;
   uint public approversCount;
+  string terminationReason;
   //map whether an address is a party to the transaction
   mapping(address => bool) public parties;
   
@@ -47,9 +49,8 @@ contract Escrow {
   }
   
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply one of the parties to transaction
-  //TODO: deposit returned to creator/agent after termination/failure of transaction
   //initiate escrow with deposit amount, purchase price and assign creator as agent
-  constructor(uint _deposit, uint _price, address creator) public payable {
+  constructor(uint _deposit, uint _price, address payable creator) public payable {
       agent = creator;
       deposit = _deposit;
       price = _price;
@@ -57,21 +58,27 @@ contract Escrow {
       approversCount++;
   }
   
-  //amount sent needs to == total purchase price - deposit, either in one transfer or in chunks larger than deposit
-  //in practice, sending total purchase amount would likely happen immediately before closeDeal()
-  //TODO: anyone contributing enough money would become a party, might need to gate
-  function sendFunds() public payable {
-      require(msg.value >= deposit);
-      //if sending funds, include as party to transaction (likely buyer or financier)
-      parties[msg.sender] = true;
+  //agent confirms who are parties to the deal
+  function approveParty(address _party) public restricted {
+      parties[_party] = true;
       approversCount++;
   }
   
+  //amount sent needs to >= total purchase price - deposit, either in one transfer or in chunks larger than deposit
+  //in practice, sending total purchase amount would likely happen immediately before closeDeal()
+  function sendFunds() public payable {
+      //funds do not have to be sent in one transaction, but must be larger than the deposit
+      require(msg.value >= deposit);
+      //require funds to come from party to transaction (likely buyer or financier)
+      require(parties[msg.sender] == true);
+  }
+  
   //create new escrow contract within master structure, e.g. for split closings or separate deliveries
-  function sendEscrow(string memory description, uint _price, address payable recipient) public restricted {
+  function sendEscrow(string memory description, uint _price, uint _deposit, address payable recipient) public restricted {
       InEscrow memory newRequest = InEscrow({
          description: description,
          price: _price,
+         deposit: _deposit,
          recipient: recipient,
          complete: false,
          approvalCount: 0
@@ -92,11 +99,22 @@ contract Escrow {
   //agent confirms conditions satisfied and finalizes transaction
   function closeDeal(uint index) public restricted {
       InEscrow storage escrow = escrows[index];
-      //require purchase price in escrow and all involved parties confirm ready for closing
       require(escrowAddress.balance >= price);
       require(escrow.approvalCount == approversCount);
       require(!escrow.complete);
       escrow.recipient.transfer(escrow.price);
       escrow.complete = true;
+  }
+  
+  //only agent may terminate deal, providing a reason for termination and will retain deposit
+  function terminateDeal(uint index, string memory _terminationReason) public restricted {
+      InEscrow storage escrow = escrows[index];
+      require(!escrow.complete);
+      /**TODO: price - deposit returned to funds sender after termination/failure of transaction
+      //escrow.recipient.transfer((escrow.price - escrow.deposit));**/
+      //return non-refundable deposit to agent
+      agent.transfer(escrow.deposit);
+      escrow.complete = true;
+      terminationReason = _terminationReason;
   }
 }
