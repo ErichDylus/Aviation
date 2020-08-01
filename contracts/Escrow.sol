@@ -33,8 +33,9 @@ contract Escrow {
   }
   
   InEscrow[] public escrows;
-  address payable agent;
   address escrowAddress = address(this);
+  address payable agent;
+  address payable buyer;
   uint price;
   uint deposit;
   uint public approversCount;
@@ -67,10 +68,11 @@ contract Escrow {
   //amount sent needs to >= total purchase price - deposit, either in one transfer or in chunks larger than deposit
   //in practice, sending total purchase amount would likely happen immediately before closeDeal()
   function sendFunds() public payable {
-      //funds do not have to be sent in one transaction, but must be larger than the deposit
-      require(msg.value >= deposit);
+      //funds must be sent in one transaction, and must be larger than the deposit
+      require(msg.value >= price - deposit);
       //require funds to come from party to transaction (likely buyer or financier)
       require(parties[msg.sender] == true);
+      buyer = msg.sender;
   }
   
   //create new escrow contract within master structure, e.g. for split closings or separate deliveries
@@ -111,10 +113,10 @@ contract Escrow {
   function terminateDeal(uint index, string memory _terminationReason) public restricted {
       InEscrow storage escrow = escrows[index];
       require(!escrow.complete);
-      /**TODO: price - deposit returned to funds sender after termination/failure of transaction
-      //escrow.recipient.transfer((escrow.price - escrow.deposit));**/
       //return non-refundable deposit to agent
       agent.transfer(escrow.deposit);
+      //return purchase price - deposit to buyer
+      buyer.transfer(escrow.price - deposit);
       escrow.complete = true;
       terminationReason = _terminationReason;
   }
