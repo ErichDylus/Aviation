@@ -55,7 +55,7 @@ contract Escrow {
       deposit = _deposit;
       price = _price;
       parties[agent] = true;
-      approversCount++;
+      approversCount == 1;
   }
   
   //agent confirms who are parties to the deal
@@ -100,7 +100,8 @@ contract Escrow {
   function closeDeal(uint index) public restricted {
       InEscrow storage escrow = escrows[index];
       require(escrowAddress.balance >= price);
-      require(escrow.approvalCount == approversCount);
+      //require approvalCount be greater than or equal to 
+      require(escrow.approvalCount >= approversCount);
       require(!escrow.complete);
       escrow.recipient.transfer(escrow.price);
       escrow.complete = true;
