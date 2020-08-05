@@ -4,6 +4,8 @@
 
 // see: https://lib.openlaw.io/web/default/template/Aircraft%20Sale%20Agreement
 
+// TODO: incorporate Escrow.sol, API triggers 
+
 <%
 ==Seller==
 [[Seller Address: EthAddress]]
@@ -18,11 +20,11 @@
 
 \centered**Aircraft Sale Agreement**
 
-The seller described at the Ethereum address **[[Seller ETH Address: EthAddress]]** (the "Seller"), has good and marketable title to that certain **[[Airframe Description]]** bearing MSN **[[MSN]]** and Registration Number **[[Registration Number]]** including such Engines, APU, Equipment, and Aircraft Documents identified in __Exhibit A__ attached hereto (collectively, the "Aircraft"), free and clear of any liens, mortgages, pledges, security interests, and other encumbrances of any kind, and Seller hereby does agree to sell, convey, transfer and assign, free and clear of all liens, charges, encumbrances, debts, obligations and liabilities whatsoever, all of the Seller's right, title and interest in and to Aircraft "AS-IS AND WITH ALL FAULTS" to the buyer described at Ethereum address **[[Buyer ETH Address: EthAddress]]** (the "Buyer"), pursuant to the terms and conditions hereafter set forth. This aircraft sale agreement (the "Agreement") is entered into as of [[Effective Date: Date]].  
+The seller described at, and possessing the private key to, the Ethereum address **[[Seller ETH Address: EthAddress]]** (the "Seller"), has good and marketable title to that certain **[[Airframe Description]]** bearing MSN **[[MSN]]** and Registration Number **[[Registration Number]]** including such Engines, APU, Equipment, and Aircraft Documents identified in __Exhibit A__ attached hereto (collectively, the "Aircraft"), free and clear of any liens, mortgages, pledges, security interests, and other encumbrances of any kind, and Seller hereby does agree to sell, convey, transfer and assign, free and clear of all liens, charges, encumbrances, debts, obligations and liabilities whatsoever, all of the Seller's right, title and interest in and to Aircraft "AS-IS AND WITH ALL FAULTS" to the buyer described at, and possessing the private key to, Ethereum address **[[Buyer ETH Address: EthAddress]]** (the "Buyer"), pursuant to the terms and conditions hereafter set forth. This aircraft sale agreement (the "Agreement") is entered into as of [[Effective Date: Date]].  
 
 The purchase price for the Aircraft is agreed by the parties hereto to be **[[Purchase Price: Number]] ether** (the "Purchase Price"). Prior to execution of this Agreement, Buyer shall cause the transfer of the Purchase Price via the following: [[Escrow: Clause("Escrow Ether")]] (the "Smart Contract").
 
-The Seller shall promptly ensure the Aircraft's location at or arrange for the Aircraft’s delivery to, at Seller's sole cost and expense, [[Jurisdiction or specific Delivery Location]] within three business days of Buyer's transfer of the Purchase Price to the Smart Contract.  Seller will cause to be invoked the appropriate function in the Smart Contract to confirm delivery.
+The Seller shall promptly ensure the Aircraft's location at or arrange for the Aircraft’s delivery to, at Seller's sole cost and expense, [[Jurisdiction or specific Delivery Location]] within three business days of Buyer's transfer of the Purchase Price to the Smart Contract.  Seller will cause to be invoked the appropriate function in the Smart Contract to confirm delivery. 
 
 Buyer will cause to be invoked the appropriate function in the Smart Contract to confirm acceptance of the Aircraft or otherwise confirm such acceptance in writing, at which time risk of loss, damage, or destruction of the Aircraft shall pass from Seller to Buyer. 
 
