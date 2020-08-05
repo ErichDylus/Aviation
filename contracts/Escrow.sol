@@ -1,13 +1,13 @@
 pragma solidity ^0.6.0;
 
-//in process, not recommended to be used for any purpose
+//FOR DEMONSTRATION ONLY, in process, not recommended to be used for any purpose
 //@dev create a smart escrow contract for purposes of an aircraft sale transaction
 //buyer or escrow agent creates contract with submitted deposit, amount and terms determined in offchain negotiations/documentation
 
 contract EscrowFactory {
     address[] public deployedEscrows;
     
-    //buyer or agent creates new escrow contract by submitting deposit and price amount
+    //buyer or agent creates new escrow contract by submitting deposit and price amount along with at least as much ether as deposit value
     function createEscrow(uint deposit, uint price) public payable {
         require(msg.value >= deposit * 1 ether);
         address newEscrow = address(new Escrow(deposit, price, msg.sender));
@@ -59,7 +59,7 @@ contract Escrow {
       approversCount == 1;
   }
   
-  //agent confirms who are parties to the deal
+  //agent confirms who are parties to the deal and therefore approvers to whether deal may ultimately close
   function approveParty(address _party) public restricted {
       parties[_party] = true;
       approversCount++;
@@ -76,6 +76,7 @@ contract Escrow {
   }
   
   //create new escrow contract within master structure, e.g. for split closings or separate deliveries
+  //TODO: further testing here
   function sendEscrow(string memory description, uint _price, uint _deposit, address payable recipient) public restricted {
       InEscrow memory newRequest = InEscrow({
          description: description,
