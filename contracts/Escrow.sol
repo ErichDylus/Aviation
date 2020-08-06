@@ -36,6 +36,7 @@ contract Escrow {
   address escrowAddress = address(this);
   address payable agent;
   address payable buyer;
+  address payable recipient;
   uint price;
   uint deposit;
   uint public approversCount;
@@ -50,8 +51,9 @@ contract Escrow {
   }
   
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply one of the parties to transaction
-  //initiate escrow with deposit amount, purchase price and assign creator as agent
+  //initiate escrow with deposit amount, purchase price and assign creator as agent (will )
   constructor(uint _deposit, uint _price, address payable creator) public payable {
+      require(msg.value >= _deposit * 1 ether);
       agent = creator;
       deposit = _deposit;
       price = _price;
@@ -65,11 +67,19 @@ contract Escrow {
       approversCount++;
   }
   
+  //agent approves recipient of escrowed funds (likely seller or a lienholder)
+  function approveRecipient(address payable _recipient) public restricted {
+      parties[_recipient] = true;
+      approversCount++;
+      recipient = _recipient;
+  }
+  
   //amount sent needs to >= total purchase price - deposit, either in one transfer or in chunks larger than deposit
+  //buyer must be cleared by agent first via approveParty(), to prevent unknown senders
   //in practice, sending total purchase amount would likely happen immediately before closeDeal()
   function sendFunds() public payable {
-      //funds must be sent in one transaction, and must be larger than the deposit
-      require(msg.value >= price - deposit);
+      //funds must be sent in one transaction, and must be greater than or equal to the purchase price - deposit
+      require(msg.value >= price - deposit * 1 ether);
       //require funds to come from party to transaction (likely buyer or financier)
       require(parties[msg.sender] == true);
       buyer = msg.sender;
@@ -77,12 +87,12 @@ contract Escrow {
   
   //create new escrow contract within master structure, e.g. for split closings or separate deliveries
   //TODO: further testing here
-  function sendEscrow(string memory description, uint _price, uint _deposit, address payable recipient) public restricted {
+  function sendEscrow(string memory description, uint _price, uint _deposit, address payable _recipient) public restricted {
       InEscrow memory newRequest = InEscrow({
          description: description,
          price: _price,
          deposit: _deposit,
-         recipient: recipient,
+         recipient: _recipient,
          complete: false,
          approvalCount: 0
       });
@@ -115,8 +125,9 @@ contract Escrow {
       InEscrow storage escrow = escrows[index];
       require(!escrow.complete);
       //return non-refundable deposit to agent
+      //TODO: ensure 'transfer' is the recommended operation 
       agent.transfer(escrow.deposit);
-      //return purchase price - deposit to buyer
+      //return purchase price - deposit to buyer, assuming deposit negotiated as non-refundable
       buyer.transfer(escrow.price - deposit);
       escrow.complete = true;
       terminationReason = _terminationReason;
