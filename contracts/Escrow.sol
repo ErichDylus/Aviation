@@ -39,7 +39,7 @@ contract Escrow {
   address payable recipient;
   uint price;
   uint deposit;
-  uint public approversCount;
+  uint approversCount;
   string terminationReason;
   //map whether an address is a party to the transaction
   mapping(address => bool) public parties;
@@ -77,9 +77,10 @@ contract Escrow {
   //amount sent needs to >= total purchase price - deposit, either in one transfer or in chunks larger than deposit
   //buyer must be cleared by agent first via approveParty(), to prevent unknown senders
   //in practice, sending total purchase amount would likely happen immediately before closeDeal()
-  function sendFunds() public payable {
+  function sendFunds(uint _fundAmount) public payable {
       //funds must be sent in one transaction, and must be greater than or equal to the purchase price - deposit
-      require(msg.value >= price - deposit * 1 ether);
+      require(_fundAmount >= price - deposit);
+      require(_fundAmount <= msg.value);
       //require funds to come from party to transaction (likely buyer or financier)
       require(parties[msg.sender] == true);
       buyer = msg.sender;
