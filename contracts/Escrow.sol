@@ -4,7 +4,7 @@ pragma solidity ^0.6.0;
 //@dev create a smart escrow contract for purposes of an aircraft sale transaction
 //buyer or escrow agent creates contract with submitted deposit, amount and terms determined in offchain negotiations/documentation
 
-contract EscrowFactory {
+/*contract EscrowFactory {
     address[] public deployedEscrows;
     
     //buyer or agent creates new escrow contract by submitting deposit and price amount along with at least as much ether as deposit value
@@ -17,7 +17,7 @@ contract EscrowFactory {
     function getDeployedEscrows() public view returns (address[] memory) {
         return deployedEscrows;
     }
-}
+}*/
 
 contract Escrow {
     
@@ -40,6 +40,8 @@ contract Escrow {
   uint price;
   uint deposit;
   uint approversCount;
+  uint index;
+  string description;
   string terminationReason;
   //map whether an address is a party to the transaction
   mapping(address => bool) public parties;
@@ -51,23 +53,28 @@ contract Escrow {
   }
   
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply one of the parties to transaction
-  //initiate escrow with deposit amount, purchase price and assign creator as agent (will )
-  constructor(uint _deposit, uint _price, address payable creator) public payable {
+  //initiate escrow with escription, deposit amount, purchase price, assign creator as agent, and recipient (likely seller or financier)
+  constructor(string memory _description, uint _deposit, uint _price, address payable _creator, address payable _recipient) public payable {
       require(msg.value >= _deposit * 1 ether);
-      agent = creator;
+      agent = _creator;
       deposit = _deposit;
       price = _price;
+      description = _description;
+      recipient = _recipient;
       parties[agent] = true;
-      approversCount == 1;
+      approversCount = 1;
+      index = 0;
+      sendEscrow(description, price, deposit, recipient);
   }
   
   //agent confirms who are parties to the deal and therefore approvers to whether deal may ultimately close
   function approveParty(address _party) public restricted {
+      require(!parties[_party], "Party already approved");
       parties[_party] = true;
       approversCount++;
   }
   
-  //agent approves recipient of escrowed funds (likely seller or a lienholder)
+  //agent confirms recipient of escrowed funds as extra security measure, or if flow of funds changed since creation of escrow (likely seller or a lienholder)
   function approveRecipient(address payable _recipient) public restricted {
       parties[_recipient] = true;
       approversCount++;
@@ -82,15 +89,14 @@ contract Escrow {
       require(_fundAmount >= price - deposit);
       require(_fundAmount <= msg.value);
       //require funds to come from party to transaction (likely buyer or financier)
-      require(parties[msg.sender] == true);
+      require(parties[msg.sender] == true, "Sender not approved party");
       buyer = msg.sender;
   }
   
   //create new escrow contract within master structure, e.g. for split closings or separate deliveries
-  //TODO: further testing here
-  function sendEscrow(string memory description, uint _price, uint _deposit, address payable _recipient) public restricted {
+  function sendEscrow(string memory _description, uint _price, uint _deposit, address payable _recipient) public restricted {
       InEscrow memory newRequest = InEscrow({
-         description: description,
+         description: _description,
          price: _price,
          deposit: _deposit,
          recipient: _recipient,
@@ -101,8 +107,8 @@ contract Escrow {
   }
   
   //allow each approver (party to deal) confirm ready for closing
-  function approveClosing(uint index) public {
-      InEscrow storage escrow = escrows[index];
+  function approveClosing(uint _index) public {
+      InEscrow storage escrow = escrows[_index];
       //require approver is a party
       require(parties[msg.sender]);
       require(!escrow.approvals[msg.sender]);
@@ -111,10 +117,10 @@ contract Escrow {
   }
   
   //agent confirms conditions satisfied and finalizes transaction
-  function closeDeal(uint index) public restricted {
-      InEscrow storage escrow = escrows[index];
+  function closeDeal(uint _index) public restricted {
+      InEscrow storage escrow = escrows[_index];
       require(escrowAddress.balance >= price);
-      //require approvalCount be greater than or equal to 
+      //require approvalCount be greater than or equal to number of approvers
       require(escrow.approvalCount >= approversCount);
       require(!escrow.complete);
       escrow.recipient.transfer(escrow.price);
@@ -122,10 +128,10 @@ contract Escrow {
   }
   
   //only agent may terminate deal, providing a reason for termination and will retain deposit
-  function terminateDeal(uint index, string memory _terminationReason) public restricted {
-      InEscrow storage escrow = escrows[index];
+  function terminateDeal(uint _index, string memory _terminationReason) public restricted {
+      InEscrow storage escrow = escrows[_index];
       require(!escrow.complete);
-      //return non-refundable deposit to agent
+      //return deposit to agent (if negotiated as non-refundable)
       //TODO: ensure 'transfer' is the recommended operation 
       agent.transfer(escrow.deposit);
       //return purchase price - deposit to buyer, assuming deposit negotiated as non-refundable
