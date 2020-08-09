@@ -1,8 +1,8 @@
 pragma solidity ^0.6.0;
 
 //FOR DEMONSTRATION ONLY, in process, not recommended to be used for any purpose
-//@dev create a smart escrow contract for purposes of an aircraft sale transaction
-//buyer or escrow agent creates contract with submitted deposit, amount and terms determined in offchain negotiations/documentation
+//@dev create a smart escrow contract for purposes of an aircraft sale/BI transfer transaction
+//buyer or escrow agent constructs contract with submitted deposit, amount and terms determined in offchain negotiations/documentation
 
 /*contract EscrowFactory {
     address[] public deployedEscrows;
@@ -87,7 +87,7 @@ contract Escrow {
   function sendFunds(uint _fundAmount) public payable {
       //funds must be sent in one transaction, and must be greater than or equal to the purchase price - deposit
       require(_fundAmount >= price - deposit);
-      require(_fundAmount <= msg.value);
+      require(_fundAmount == msg.value, "Value sent must at least match fundAmount");
       //require funds to come from party to transaction (likely buyer or financier)
       require(parties[msg.sender] == true, "Sender not approved party");
       buyer = msg.sender;
