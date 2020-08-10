@@ -1,8 +1,8 @@
 pragma solidity ^0.6.0;
 
 //FOR DEMONSTRATION ONLY, in process, not recommended to be used for any purpose
-//@dev create a smart escrow contract for purposes of an aircraft sale/BI transfer transaction
-//buyer or escrow agent constructs contract with submitted deposit, amount and terms determined in offchain negotiations/documentation
+//@dev create a smart escrow contract for purposes of an aircraft sale transaction
+//buyer or escrow agent creates contract with submitted deposit, amount and terms determined in offchain negotiations/documentation
 
 /*contract EscrowFactory {
     address[] public deployedEscrows;
@@ -55,7 +55,7 @@ contract Escrow {
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply one of the parties to transaction
   //initiate escrow with escription, deposit amount, purchase price, assign creator as agent, and recipient (likely seller or financier)
   constructor(string memory _description, uint _deposit, uint _price, address payable _creator, address payable _recipient) public payable {
-      require(msg.value >= _deposit * 1 ether);
+      require(msg.value >= _deposit * 1 ether, "Submit deposit amount");
       agent = _creator;
       deposit = _deposit;
       price = _price;
@@ -86,8 +86,8 @@ contract Escrow {
   //in practice, sending total purchase amount would likely happen immediately before closeDeal()
   function sendFunds(uint _fundAmount) public payable {
       //funds must be sent in one transaction, and must be greater than or equal to the purchase price - deposit
-      require(_fundAmount >= price - deposit);
-      require(_fundAmount == msg.value, "Value sent must at least match fundAmount");
+      require(_fundAmount >= price - deposit, "fundAmount must satisfy outstanding amount of purchase price, minus deposit already received");
+      require(_fundAmount <= msg.value);
       //require funds to come from party to transaction (likely buyer or financier)
       require(parties[msg.sender] == true, "Sender not approved party");
       buyer = msg.sender;
@@ -110,7 +110,7 @@ contract Escrow {
   function approveClosing(uint _index) public {
       InEscrow storage escrow = escrows[_index];
       //require approver is a party
-      require(parties[msg.sender]);
+      require(parties[msg.sender], "Approver must be a party");
       require(!escrow.approvals[msg.sender]);
       escrow.approvals[msg.sender] = true;
       escrow.approvalCount++;
@@ -119,9 +119,9 @@ contract Escrow {
   //agent confirms conditions satisfied and finalizes transaction
   function closeDeal(uint _index) public restricted {
       InEscrow storage escrow = escrows[_index];
-      require(escrowAddress.balance >= price);
+      require(escrowAddress.balance >= price, "Funds not yet received");
       //require approvalCount be greater than or equal to number of approvers
-      require(escrow.approvalCount >= approversCount);
+      require(escrow.approvalCount >= approversCount, "All parties must confirm approval of closing");
       require(!escrow.complete);
       escrow.recipient.transfer(escrow.price);
       escrow.complete = true;
