@@ -111,7 +111,7 @@ contract Escrow {
       InEscrow storage escrow = escrows[_index];
       //require approver is a party
       require(parties[msg.sender], "Approver must be a party");
-      require(!escrow.approvals[msg.sender]);
+      require(!escrow.approvals[msg.sender], "Already approved by this party");
       escrow.approvals[msg.sender] = true;
       escrow.approvalCount++;
   }
@@ -122,7 +122,7 @@ contract Escrow {
       require(escrowAddress.balance >= price, "Funds not yet received");
       //require approvalCount be greater than or equal to number of approvers
       require(escrow.approvalCount >= approversCount, "All parties must confirm approval of closing");
-      require(!escrow.complete);
+      require(!escrow.complete, "Deal already completed or terminated");
       escrow.recipient.transfer(escrow.price);
       escrow.complete = true;
   }
@@ -130,7 +130,7 @@ contract Escrow {
   //only agent may terminate deal, providing a reason for termination and will retain deposit
   function terminateDeal(uint _index, string memory _terminationReason) public restricted {
       InEscrow storage escrow = escrows[_index];
-      require(!escrow.complete);
+      require(!escrow.complete, "Deal already completed or terminated");
       //return deposit to agent (if negotiated as non-refundable)
       //TODO: ensure 'transfer' is the recommended operation 
       agent.transfer(escrow.deposit);
