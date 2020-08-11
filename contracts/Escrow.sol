@@ -48,7 +48,7 @@ contract Escrow {
   
   //restricts to agent (creator of escrow contract)
   modifier restricted() {
-    require(msg.sender == agent);
+    require(msg.sender == agent, "This may only be called by the Agent");
     _;
   }
   
@@ -123,7 +123,8 @@ contract Escrow {
       //require approvalCount be greater than or equal to number of approvers
       require(escrow.approvalCount >= approversCount, "All parties must confirm approval of closing");
       require(!escrow.complete, "Deal already completed or terminated");
-      escrow.recipient.transfer(escrow.price);
+      //NOTE: closeDeal transfers entire escrow balance to recipient (including deposit)
+      recipient.transfer(escrowAddress.balance);
       escrow.complete = true;
   }
   
@@ -132,10 +133,9 @@ contract Escrow {
       InEscrow storage escrow = escrows[_index];
       require(!escrow.complete, "Deal already completed or terminated");
       //return deposit to agent (if negotiated as non-refundable)
-      //TODO: ensure 'transfer' is the recommended operation 
       agent.transfer(escrow.deposit);
       //return purchase price - deposit to buyer, assuming deposit negotiated as non-refundable
-      buyer.transfer(escrow.price - deposit);
+      buyer.transfer(escrowAddress.balance);
       escrow.complete = true;
       terminationReason = _terminationReason;
   }
