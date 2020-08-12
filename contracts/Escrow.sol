@@ -46,13 +46,17 @@ contract Escrow {
   //map whether an address is a party to the transaction
   mapping(address => bool) public parties;
   
+  //events for when deal either closes or is terminated
+  event DealClosed();
+  event DealTerminated(string terminationReason);
+  
   //restricts to agent (creator of escrow contract)
   modifier restricted() {
     require(msg.sender == agent, "This may only be called by the Agent");
     _;
   }
   
-  //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply one of the parties to transaction
+  //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
   //initiate escrow with escription, deposit amount, purchase price, assign creator as agent, and recipient (likely seller or financier)
   constructor(string memory _description, uint _deposit, uint _price, address payable _creator, address payable _recipient) public payable {
       require(msg.value >= _deposit * 1 ether, "Submit deposit amount");
@@ -87,7 +91,7 @@ contract Escrow {
   function sendFunds(uint _fundAmount) public payable {
       //funds must be sent in one transaction, and must be greater than or equal to the purchase price - deposit
       require(_fundAmount >= price - deposit, "fundAmount must satisfy outstanding amount of purchase price, minus deposit already received");
-      require(_fundAmount <= msg.value);
+      require(_fundAmount <= msg.value, "Submit fundAmount");
       //require funds to come from party to transaction (likely buyer or financier)
       require(parties[msg.sender] == true, "Sender not approved party");
       buyer = msg.sender;
@@ -126,17 +130,22 @@ contract Escrow {
       //NOTE: closeDeal transfers entire escrow balance to recipient (including deposit)
       recipient.transfer(escrowAddress.balance);
       escrow.complete = true;
+      emit DealClosed();
   }
   
   //only agent may terminate deal, providing a reason for termination and will retain deposit
   function terminateDeal(uint _index, string memory _terminationReason) public restricted {
       InEscrow storage escrow = escrows[_index];
       require(!escrow.complete, "Deal already completed or terminated");
-      //return deposit to agent (if negotiated as non-refundable)
-      agent.transfer(escrow.deposit);
-      //return purchase price - deposit to buyer, assuming deposit negotiated as non-refundable
-      buyer.transfer(escrowAddress.balance);
+      //return funds to buyer (if a different address than agent as assigned via sendFunds()), otherwise return to agent (likely only deposit)
+      //NOTE: if buyer has sent remainder of purchase price, if agent terminates escrow the entire balance (including deposit) is remitted to buyer
+      if (parties[buyer] == true) {
+          buyer.transfer(escrowAddress.balance);
+      } else {
+          agent.transfer(escrowAddress.balance);
+      } 
       escrow.complete = true;
       terminationReason = _terminationReason;
+      emit DealTerminated(terminationReason);
   }
 }
