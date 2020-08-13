@@ -46,7 +46,9 @@ contract Escrow {
   //map whether an address is a party to the transaction
   mapping(address => bool) public parties;
   
-  //events for when deal either closes or is terminated
+  //events for when party approves closing, purchase price received in escrow, deal closes, deal terminated
+  event ReadyToClose(address approver);
+  event FundsInEscrow(address buyer);
   event DealClosed();
   event DealTerminated(string terminationReason);
   
@@ -95,6 +97,7 @@ contract Escrow {
       //require funds to come from party to transaction (likely buyer or financier)
       require(parties[msg.sender] == true, "Sender not approved party");
       buyer = msg.sender;
+      emit FundsInEscrow(buyer);
   }
   
   //create new escrow contract within master structure, e.g. for split closings or separate deliveries
@@ -118,6 +121,7 @@ contract Escrow {
       require(!escrow.approvals[msg.sender], "Already approved by this party");
       escrow.approvals[msg.sender] = true;
       escrow.approvalCount++;
+      emit ReadyToClose(msg.sender);
   }
   
   //agent confirms conditions satisfied and finalizes transaction
