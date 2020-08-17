@@ -1,23 +1,9 @@
 pragma solidity ^0.6.0;
 
-//FOR DEMONSTRATION ONLY, in process, not recommended to be used for any purpose
+//FOR DEMONSTRATION ONLY, not recommended to be used for any purpose
 //@dev create a smart escrow contract for purposes of an aircraft sale transaction
-//buyer or escrow agent creates contract with submitted deposit, amount and terms determined in offchain negotiations/documentation
-
-/*contract EscrowFactory {
-    address[] public deployedEscrows;
-    
-    //buyer or agent creates new escrow contract by submitting deposit and price amount along with at least as much ether as deposit value
-    function createEscrow(uint deposit, uint price) public payable {
-        require(msg.value >= deposit * 1 ether);
-        address newEscrow = address(new Escrow(deposit, price, msg.sender));
-        deployedEscrows.push(newEscrow);
-    }
-    
-    function getDeployedEscrows() public view returns (address[] memory) {
-        return deployedEscrows;
-    }
-}*/
+//buyer or escrow agent creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier)
+//other terms may be determined in offchain negotiations/documentation
 
 contract Escrow {
     
@@ -153,3 +139,19 @@ contract Escrow {
       emit DealTerminated(terminationReason);
   }
 }
+
+/*** to be revisited as escrow factory variant
+contract EscrowFactory {
+    address[] public deployedEscrows;
+    
+    //buyer or agent creates new escrow contract by submitting deposit and price amount along with at least as much ether as deposit value
+    function createEscrow(uint deposit, uint price) public payable {
+        require(msg.value >= deposit * 1 ether);
+        address newEscrow = address(new Escrow(deposit, price, msg.sender));
+        deployedEscrows.push(newEscrow);
+    }
+    
+    function getDeployedEscrows() public view returns (address[] memory) {
+        return deployedEscrows;
+    }
+}***/
