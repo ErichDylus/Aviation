@@ -7,7 +7,7 @@ pragma solidity ^0.6.0;
 
 import "https://github.com/ErichDylus/100-Days-Of-Coding-Solidity/blob/master/contracts/Offchain.sol";
 
-contract Escrow is USDConvert {
+contract Escrow /*is USDConvert*/ {
     
   //escrow struct to contain basic description of underlying asset/deal, purchase price, ultimate recipient of funds, whether complete, number of parties
   struct InEscrow {
@@ -50,11 +50,13 @@ contract Escrow is USDConvert {
   //initiate escrow with escription, deposit amount in USD, purchase price in USD, assign creator as agent, and recipient (likely seller or financier)
   constructor(string memory _description, uint256 _deposit, uint256 _price, address payable _creator, address payable _recipient) public payable {
       require(msg.value >= deposit * 1 ether, "Submit deposit amount");
-      require(ethereumPrice > 0, "Price feed error");
+      //require(ethereumPrice > 0, "Price feed error");
       agent = _creator;
       //convert deposit and purchase price to ETH from USD using price of ethereum at construction
-      deposit = (_deposit/ethereumPrice);
-      price = (_price/ethereumPrice);
+      //deposit = (_deposit/ethereumPrice);
+      //price = (_price/ethereumPrice);
+      deposit = _deposit;
+      price = _price;
       description = _description;
       recipient = _recipient;
       parties[agent] = true;
