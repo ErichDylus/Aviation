@@ -5,16 +5,18 @@ pragma solidity ^0.6.0;
 //buyer or escrow agent creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier)
 //other terms may be determined in offchain negotiations/documentation
 
-contract Escrow {
+import "https://github.com/ErichDylus/100-Days-Of-Coding-Solidity/blob/master/contracts/Offchain.sol";
+
+contract Escrow is USDConvert {
     
   //escrow struct to contain basic description of underlying asset/deal, purchase price, ultimate recipient of funds, whether complete, number of parties
   struct InEscrow {
       string description;
-      uint price;
-      uint deposit;
+      uint256 price;
+      uint256 deposit;
       address payable recipient;
       bool complete;
-      uint approvalCount;
+      uint256 approvalCount;
       mapping(address => bool) approvals;
   }
   
@@ -23,10 +25,10 @@ contract Escrow {
   address payable agent;
   address payable buyer;
   address payable recipient;
-  uint price;
-  uint deposit;
-  uint approversCount;
-  uint index;
+  uint256 price;
+  uint256 deposit;
+  uint256 approversCount;
+  uint256 index;
   string description;
   string terminationReason;
   //map whether an address is a party to the transaction
@@ -45,12 +47,14 @@ contract Escrow {
   }
   
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
-  //initiate escrow with escription, deposit amount, purchase price, assign creator as agent, and recipient (likely seller or financier)
-  constructor(string memory _description, uint _deposit, uint _price, address payable _creator, address payable _recipient) public payable {
-      require(msg.value >= _deposit * 1 ether, "Submit deposit amount");
+  //initiate escrow with escription, deposit amount in USD, purchase price in USD, assign creator as agent, and recipient (likely seller or financier)
+  constructor(string memory _description, uint256 _deposit, uint256 _price, address payable _creator, address payable _recipient) public payable {
+      require(msg.value >= deposit * 1 ether, "Submit deposit amount");
+      require(ethereumPrice > 0, "Price feed error");
       agent = _creator;
-      deposit = _deposit;
-      price = _price;
+      //convert deposit and purchase price to ETH from USD using price of ethereum at construction
+      deposit = (_deposit/ethereumPrice);
+      price = (_price/ethereumPrice);
       description = _description;
       recipient = _recipient;
       parties[agent] = true;
@@ -76,7 +80,7 @@ contract Escrow {
   //amount sent needs to >= total purchase price - deposit, either in one transfer or in chunks larger than deposit
   //buyer must be cleared by agent first via approveParty(), to prevent unknown senders
   //in practice, sending total purchase amount would likely happen immediately before closeDeal()
-  function sendFunds(uint _fundAmount) public payable {
+  function sendFunds(uint256 _fundAmount) public payable {
       //funds must be sent in one transaction, and must be greater than or equal to the purchase price - deposit
       require(_fundAmount >= price - deposit, "fundAmount must satisfy outstanding amount of purchase price, minus deposit already received");
       require(_fundAmount <= msg.value, "Submit fundAmount");
@@ -87,7 +91,7 @@ contract Escrow {
   }
   
   //create new escrow contract within master structure, e.g. for split closings or separate deliveries
-  function sendEscrow(string memory _description, uint _price, uint _deposit, address payable _recipient) public restricted {
+  function sendEscrow(string memory _description, uint256 _price, uint256 _deposit, address payable _recipient) public restricted {
       InEscrow memory newRequest = InEscrow({
          description: _description,
          price: _price,
@@ -100,7 +104,7 @@ contract Escrow {
   }
   
   //allow each approver (party to deal) confirm ready for closing
-  function approveClosing(uint _index) public {
+  function approveClosing(uint256 _index) public {
       InEscrow storage escrow = escrows[_index];
       //require approver is a party
       require(parties[msg.sender], "Approver must be a party");
@@ -111,7 +115,7 @@ contract Escrow {
   }
   
   //agent confirms conditions satisfied and finalizes transaction
-  function closeDeal(uint _index) public restricted {
+  function closeDeal(uint256 _index) public restricted {
       InEscrow storage escrow = escrows[_index];
       require(escrowAddress.balance >= price, "Funds not yet received");
       //require approvalCount be greater than or equal to number of approvers
@@ -124,7 +128,7 @@ contract Escrow {
   }
   
   //only agent may terminate deal, providing a reason for termination and will retain deposit
-  function terminateDeal(uint _index, string memory _terminationReason) public restricted {
+  function terminateDeal(uint256 _index, string memory _terminationReason) public restricted {
       InEscrow storage escrow = escrows[_index];
       require(!escrow.complete, "Deal already completed or terminated");
       //return funds to buyer (if a different address than agent as assigned via sendFunds()), otherwise return to agent (likely only deposit)
