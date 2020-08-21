@@ -12,14 +12,14 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 
 contract FAARegistryToken is ERC721, Ownable {
 
-  using SafeMath for uint;
+  using SafeMath for uint256;
   
   event CreateAircraft(
       address aircraftOwner, 
       string model, 
       string nNumber, 
-      uint regId, 
-      uint msn, 
+      uint256 regId, 
+      uint256 msn, 
       bool lienExists, 
       bool fractionalOwner
       );
@@ -28,14 +28,14 @@ contract FAARegistryToken is ERC721, Ownable {
     address aircraftOwner;
     string model;
     string nNumber;
-    uint regId;
-    uint msn;
+    uint256 regId;
+    uint256 msn;
     bool lienExists; 
     bool fractionalOwner;
   }
 
   Aircraft[] public aircraft;
-  uint i = 0;
+  uint256 i = 0;
   
   // @dev Initializing an ERC-721 standard token named 'FAA Registry Aircraft Token' with a symbol 'FAA'
   constructor() ERC721("FAA Registry Token", "FAA") public {
@@ -49,11 +49,11 @@ contract FAARegistryToken is ERC721, Ownable {
         address _aircraftOwner, 
         string memory _model, 
         string memory _nNumber, 
-        uint _regId, 
-        uint _msn, 
+        uint256 _regId, 
+        uint256 _msn, 
         bool _lienExists, 
         bool _fractionalOwner
-        ) internal returns (uint, uint) {
+        ) internal returns (uint256, uint256) {
     
     Aircraft memory newAircraft = Aircraft({
         aircraftOwner: _aircraftOwner,
@@ -67,7 +67,7 @@ contract FAARegistryToken is ERC721, Ownable {
     
     // @dev create unique aircraft identifier based on owner reg ID, i number and msn
     // see: https://ethereum.stackexchange.com/questions/9965/how-to-generate-a-unique-identifier-in-solidity
-    uint newAircraftId = uint(keccak256(abi.encodePacked(_regId + i + _msn)));
+    uint256 newAircraftId = uint256(keccak256(abi.encodePacked(_regId + i + _msn)));
     aircraft.push(Aircraft(_aircraftOwner, _model, _nNumber,  _regId, _msn, _lienExists, _fractionalOwner));
     i++;
     super._mint(_aircraftOwner, newAircraftId);
@@ -84,7 +84,7 @@ contract FAARegistryToken is ERC721, Ownable {
   }
   
   // @dev return aircraft details based on i number (must be inputted by searcher and remains viewable after corresponding token burned, for now)
-  function aircraftDetails(uint _i) public view returns(address, string memory, string memory, uint, bool, bool) {
+  function aircraftDetails(uint256 _i) public view returns(address, string memory, string memory, uint256, bool, bool) {
     Aircraft storage regToken = aircraft[_i];
     return (
         regToken.aircraftOwner, 
@@ -103,12 +103,12 @@ contract FAARegistryToken is ERC721, Ownable {
   function buyRegToken(
         string calldata _model, 
         string calldata _nNumber, 
-        uint _regId, 
-        uint _msn, 
+        uint256 _regId, 
+        uint256 _msn, 
         bool _lienExists, 
         bool _fractionalOwner
         ) external payable returns(uint) {
-    require(msg.value >= 0.01 ether);
+    require(msg.value >= 0.01 ether, "Please submit .01 ETH for a Registry Token");
     _createAircraft(msg.sender, _model, _nNumber, _regId, _msn, _lienExists, _fractionalOwner);
     }
     
