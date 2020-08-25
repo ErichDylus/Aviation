@@ -5,9 +5,48 @@ pragma solidity ^0.6.0;
 //buyer or escrow agent creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier)
 //other terms may be determined in offchain negotiations/documentation
 
-import "https://github.com/ErichDylus/100-Days-Of-Coding-Solidity/blob/master/contracts/Offchain.sol";
+interface AggregatorInterface {
+  function latestAnswer() external view returns (int256);
+  function latestTimestamp() external view returns (uint256);
+  function latestRound() external view returns (uint256);
+  function getAnswer(uint256 roundId) external view returns (int256);
+  function getTimestamp(uint256 roundId) external view returns (uint256);
 
-contract Escrow /*is USDConvert*/ {
+  event AnswerUpdated(int256 indexed current, uint256 indexed roundId, uint256 updatedAt);
+  event NewRound(uint256 indexed roundId, address indexed startedBy, uint256 startedAt);
+}
+
+//@dev use Chainlink ETH/USD price feed aggregator on Ropsten to convert price
+contract USDConvert {
+
+    AggregatorInterface internal priceFeed;
+
+    /**
+     * Network: Ropsten
+     * Aggregator: ETH/USD
+     * Address: 0x8468b2bDCE073A157E560AA4D9CcF6dB1DB98507
+     */
+    constructor() public {
+        priceFeed = AggregatorInterface(0x8468b2bDCE073A157E560AA4D9CcF6dB1DB98507);
+    }
+  
+    /**
+     * Returns the latest price
+     */
+    function getLatestPrice() public view returns (int256) {
+        return priceFeed.latestAnswer();
+    }
+
+    /**
+     * Returns the timestamp of the latest price update
+     */
+    function getLatestPriceTimestamp() public view returns (uint256) {
+        return priceFeed.latestTimestamp();
+    }
+}
+
+
+contract Escrow is USDConvert {
     
   //escrow struct to contain basic description of underlying asset/deal, purchase price, ultimate recipient of funds, whether complete, number of parties
   struct InEscrow {
@@ -25,6 +64,7 @@ contract Escrow /*is USDConvert*/ {
   address payable agent;
   address payable buyer;
   address payable recipient;
+  uint256 ethPrice;
   uint256 price;
   uint256 deposit;
   uint256 approversCount;
@@ -49,12 +89,14 @@ contract Escrow /*is USDConvert*/ {
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
   //initiate escrow with escription, deposit amount in USD, purchase price in USD, assign creator as agent, and recipient (likely seller or financier)
   constructor(string memory _description, uint256 _deposit, uint256 _price, address payable _creator, address payable _recipient) public payable {
+      priceFeed = AggregatorInterface(0x8468b2bDCE073A157E560AA4D9CcF6dB1DB98507);
+      ethPrice = uint256(priceFeed.latestAnswer());
       require(msg.value >= deposit * 1 ether, "Submit deposit amount");
-      //require(ethereumPrice > 0, "Price feed error");
+      //require(ethPrice > 0, "Price feed error");
       agent = _creator;
       //convert deposit and purchase price to ETH from USD using price of ethereum at construction
-      //deposit = (_deposit/ethereumPrice);
-      //price = (_price/ethereumPrice);
+      deposit = (_deposit/ethPrice);
+      price = (_price/ethPrice);
       deposit = _deposit;
       price = _price;
       description = _description;
