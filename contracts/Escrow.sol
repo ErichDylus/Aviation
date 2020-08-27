@@ -45,7 +45,6 @@ contract USDConvert {
     }
 }
 
-
 contract Escrow is USDConvert {
     
   //escrow struct to contain basic description of underlying asset/deal, purchase price, ultimate recipient of funds, whether complete, number of parties
@@ -90,15 +89,14 @@ contract Escrow is USDConvert {
   //initiate escrow with escription, deposit amount in USD, purchase price in USD, assign creator as agent, and recipient (likely seller or financier)
   constructor(string memory _description, uint256 _deposit, uint256 _price, address payable _creator, address payable _recipient) public payable {
       priceFeed = AggregatorInterface(0x8468b2bDCE073A157E560AA4D9CcF6dB1DB98507);
-      ethPrice = uint256(priceFeed.latestAnswer());
+      //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
+      ethPrice = uint256((getLatestPrice()/100000000));
       require(msg.value >= deposit * 1 ether, "Submit deposit amount");
-      //require(ethPrice > 0, "Price feed error");
       agent = _creator;
+      //TODO: TRANSLATE FLOATS (RIGHT NOW THESE RESOLVE AS ZERO)
       //convert deposit and purchase price to ETH from USD using price of ethereum at construction
       deposit = (_deposit/ethPrice);
       price = (_price/ethPrice);
-      deposit = _deposit;
-      price = _price;
       description = _description;
       recipient = _recipient;
       parties[agent] = true;
@@ -119,6 +117,12 @@ contract Escrow is USDConvert {
       parties[_recipient] = true;
       approversCount++;
       recipient = _recipient;
+  }
+  
+  
+  //check ETH price in dollars, rounded to nearest dollar
+  function checkPrice() public view returns (uint256) {
+        return ethPrice;
   }
   
   //amount sent needs to >= total purchase price - deposit, either in one transfer or in chunks larger than deposit
