@@ -90,13 +90,13 @@ contract Escrow is USDConvert {
   constructor(string memory _description, uint256 _deposit, uint256 _price, address payable _creator, address payable _recipient) public payable {
       priceFeed = AggregatorInterface(0x8468b2bDCE073A157E560AA4D9CcF6dB1DB98507);
       //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
-      ethPrice = uint256((getLatestPrice()/100000000));
+      ethPrice = uint256((getLatestPrice()));
       require(msg.value >= deposit * 1 ether, "Submit deposit amount");
       agent = _creator;
       //TODO: TRANSLATE FLOATS (RIGHT NOW THESE RESOLVE AS ZERO)
       //convert deposit and purchase price to ETH from USD using price of ethereum at construction
-      deposit = (_deposit/ethPrice);
-      price = (_price/ethPrice);
+      deposit = ((_deposit*100000000)/ethPrice);
+      price = ((_price*100000000)/ethPrice);
       description = _description;
       recipient = _recipient;
       parties[agent] = true;
