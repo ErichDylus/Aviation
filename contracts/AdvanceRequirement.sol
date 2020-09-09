@@ -11,7 +11,7 @@ contract Requirement is Ownable {
     
     bool private requirementSatisfied = false;
     mapping(address => bool) favored;
-    address[] whitelist;
+    address[] public whitelist;
     string condition;
     
     event whitelistAdded(address indexed _addr);
