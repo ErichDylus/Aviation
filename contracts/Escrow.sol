@@ -5,7 +5,7 @@ pragma solidity ^0.6.0;
 //buyer or escrow agent creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier)
 //other terms may be determined in offchain negotiations/documentation
 
-interface AggregatorInterface {
+interface AggregatorV3Interface {
   function latestAnswer() external view returns (int256);
   function latestTimestamp() external view returns (uint256);
   function latestRound() external view returns (uint256);
@@ -16,18 +16,18 @@ interface AggregatorInterface {
   event NewRound(uint256 indexed roundId, address indexed startedBy, uint256 startedAt);
 }
 
-//@dev use Chainlink ETH/USD price feed aggregator on Ropsten to convert price
+//@dev use Chainlink ETH/USD price feed aggregator on Kovan to convert price
 contract USDConvert {
 
-    AggregatorInterface internal priceFeed;
+    AggregatorV3Interface internal priceFeed;
 
     /**
-     * Network: Ropsten
+     * Network: Kovan
      * Aggregator: ETH/USD
-     * Address: 0x8468b2bDCE073A157E560AA4D9CcF6dB1DB98507
+     * Address: 0x9326BFA02ADD2366b30bacB125260Af641031331
      */
-    constructor() public {
-        priceFeed = AggregatorInterface(0x8468b2bDCE073A157E560AA4D9CcF6dB1DB98507);
+    constructor() public payable {
+        priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
     }
   
     /**
@@ -88,15 +88,15 @@ contract Escrow is USDConvert {
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
   //initiate escrow with escription, deposit amount in USD, purchase price in USD, assign creator as agent, and recipient (likely seller or financier)
   constructor(string memory _description, uint256 _deposit, uint256 _price, address payable _creator, address payable _recipient) public payable {
-      priceFeed = AggregatorInterface(0x8468b2bDCE073A157E560AA4D9CcF6dB1DB98507);
+      priceFeed = AggregatorV3Interface(0x8468b2bDCE073A157E560AA4D9CcF6dB1DB98507);
       //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
       ethPrice = uint256((getLatestPrice()));
-      require(msg.value >= deposit * 1 ether, "Submit deposit amount");
+      require(msg.value >= deposit * 10000000000000000 wei, "Submit deposit amount");
       agent = _creator;
-      //TODO: TRANSLATE FLOATS (RIGHT NOW THESE RESOLVE AS ZERO)
+      //TODO: TRANSLATE FLOATS - current solution in wei, cannot test due to testnet being down
       //convert deposit and purchase price to ETH from USD using price of ethereum at construction
-      deposit = ((_deposit*100000000)/ethPrice);
-      price = ((_price*100000000)/ethPrice);
+      deposit = ((_deposit*10000000000)/ethPrice);
+      price = ((_price*10000000000)/ethPrice);
       description = _description;
       recipient = _recipient;
       parties[agent] = true;
