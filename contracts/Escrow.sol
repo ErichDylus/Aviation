@@ -88,15 +88,14 @@ contract Escrow is USDConvert {
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
   //initiate escrow with escription, deposit amount in USD, purchase price in USD, assign creator as agent, and recipient (likely seller or financier)
   constructor(string memory _description, uint256 _deposit, uint256 _price, address payable _creator, address payable _recipient) public payable {
-      priceFeed = AggregatorV3Interface(0x8468b2bDCE073A157E560AA4D9CcF6dB1DB98507);
+      priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
       //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
       ethPrice = uint256((getLatestPrice()));
-      require(msg.value >= deposit * 10000000000000000 wei, "Submit deposit amount");
+      require(msg.value >= deposit, "Submit deposit amount");
       agent = _creator;
-      //TODO: TRANSLATE FLOATS - current solution in wei, cannot test due to testnet being down
-      //convert deposit and purchase price to ETH from USD using price of ethereum at construction
-      deposit = ((_deposit*10000000000)/ethPrice);
-      price = ((_price*10000000000)/ethPrice);
+      //convert deposit and purchase price to wei from USD
+      deposit = ((_deposit*10000000000)/ethPrice) * 10000000000000000;
+      price = ((_price*10000000000)/ethPrice) * 10000000000000000;
       description = _description;
       recipient = _recipient;
       parties[agent] = true;
