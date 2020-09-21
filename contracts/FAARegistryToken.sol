@@ -21,8 +21,7 @@ contract FAARegistryToken is ERC721, Ownable {
       uint256 regId, 
       uint256 msn, 
       bool lienExists, 
-      bool fractionalOwner
-      );
+      bool fractionalOwner);
 
   struct Aircraft {
     address aircraftOwner;
