@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.6.0;
 
 //FOR DEMONSTRATION ONLY, not recommended to be used for any purpose
@@ -30,16 +32,12 @@ contract USDConvert {
         priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
     }
   
-    /**
-     * Returns the latest price
-     */
+    //returns the latest ETH price
     function getLatestPrice() public view returns (int256) {
         return priceFeed.latestAnswer();
     }
 
-    /**
-     * Returns the timestamp of the latest price update
-     */
+    //returns the timestamp of the latest price update
     function getLatestPriceTimestamp() public view returns (uint256) {
         return priceFeed.latestTimestamp();
     }
