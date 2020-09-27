@@ -7,6 +7,8 @@ pragma solidity ^0.6.0;
 //buyer or escrow agent creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier)
 //other terms may be determined in offchain negotiations/documentation
 
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/math/SafeMath.sol";
+
 interface AggregatorV3Interface {
   function latestAnswer() external view returns (int256);
   function latestTimestamp() external view returns (uint256);
@@ -45,6 +47,9 @@ contract USDConvert {
 
 contract Escrow is USDConvert {
     
+  using SafeMath for uint256;
+  using SafeMath for uint32;
+  
   //escrow struct to contain basic description of underlying asset/deal, purchase price, ultimate recipient of funds, whether complete, number of parties
   struct InEscrow {
       string description;
@@ -66,6 +71,10 @@ contract Escrow is USDConvert {
   uint256 deposit;
   uint256 approversCount;
   uint256 index;
+  uint256 effectiveTime;
+  uint256 expirationTime;
+  uint32 constant DAY_IN_SECONDS = 86400;
+  bool isExpired;
   string description;
   string terminationReason;
   //map whether an address is a party to the transaction
@@ -76,6 +85,8 @@ contract Escrow is USDConvert {
   event FundsInEscrow(address buyer);
   event DealClosed();
   event DealTerminated(string terminationReason);
+  //TODO: is separate expiration event necessary?
+  event Expired(uint256 expirationTime);
   
   //restricts to agent (creator of escrow contract)
   modifier restricted() {
@@ -85,7 +96,7 @@ contract Escrow is USDConvert {
   
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
   //initiate escrow with escription, deposit amount in USD, purchase price in USD, assign creator as agent, and recipient (likely seller or financier)
-  constructor(string memory _description, uint256 _deposit, uint256 _price, address payable _creator, address payable _recipient) public payable {
+  constructor(string memory _description, uint256 _deposit, uint256 _price, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) public payable {
       priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
       //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
       ethPrice = uint256((getLatestPrice()));
@@ -99,6 +110,9 @@ contract Escrow is USDConvert {
       parties[agent] = true;
       approversCount = 1;
       index = 0;
+      effectiveTime = now;
+      expirationTime = effectiveTime + uint256(DAY_IN_SECONDS * uint32(_daysUntilExpiration));
+      isExpired = false;
       sendEscrow(description, price, deposit, recipient);
   }
   
@@ -131,6 +145,7 @@ contract Escrow is USDConvert {
       require(_fundAmount <= msg.value, "Submit fundAmount");
       //require funds to come from party to transaction (likely buyer or financier)
       require(parties[msg.sender] == true, "Sender not approved party");
+      require(!isExpired, "Escrow has expired");
       buyer = msg.sender;
       emit FundsInEscrow(buyer);
   }
@@ -154,6 +169,7 @@ contract Escrow is USDConvert {
       //require approver is a party
       require(parties[msg.sender], "Approver must be a party");
       require(!escrow.approvals[msg.sender], "Already approved by this party");
+      require(!isExpired, "Escrow has expired");
       escrow.approvals[msg.sender] = true;
       escrow.approvalCount++;
       emit ReadyToClose(msg.sender);
@@ -171,6 +187,17 @@ contract Escrow is USDConvert {
       escrow.complete = true;
       emit DealClosed();
   }
+  
+  //allows any party to check if expired (and if so, isExpired resolves true and will prevent closing)
+  function checkIfExpired() public returns(bool){
+        if (expirationTime <= now) {
+            isExpired = true;
+            emit Expired(expirationTime);
+        } else {
+            isExpired = false;
+        }
+        return(isExpired);
+    }
   
   //only agent may terminate deal, providing a reason for termination and will retain deposit
   function terminateDeal(uint256 _index, string memory _terminationReason) public restricted {
