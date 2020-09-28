@@ -9,7 +9,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 
 contract Requirement is Ownable {
     
-    bool private requirementSatisfied = false;
+    bool requirementSatisfied = false;
     mapping(address => bool) favored;
     address[] public whitelist;
     string condition;
