@@ -48,7 +48,6 @@ contract USDConvert {
 contract Escrow is USDConvert {
     
   using SafeMath for uint256;
-  using SafeMath for uint32;
   
   //escrow struct to contain basic description of underlying asset/deal, purchase price, ultimate recipient of funds, whether complete, number of parties
   struct InEscrow {
@@ -73,7 +72,7 @@ contract Escrow is USDConvert {
   uint256 index;
   uint256 effectiveTime;
   uint256 expirationTime;
-  uint32 constant DAY_IN_SECONDS = 86400;
+  uint256 constant DAY_IN_SECONDS = 86400;
   bool isExpired;
   string description;
   string terminationReason;
@@ -101,6 +100,7 @@ contract Escrow is USDConvert {
       //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
       ethPrice = uint256((getLatestPrice()));
       require(msg.value >= deposit, "Submit deposit amount");
+      require(_daysUntilExpiration > 0,"Expiry Date cannot be today");
       agent = _creator;
       //convert deposit and purchase price to wei from USD
       deposit = ((_deposit*10000000000)/ethPrice) * 10000000000000000;
@@ -111,7 +111,7 @@ contract Escrow is USDConvert {
       approversCount = 1;
       index = 0;
       effectiveTime = now;
-      expirationTime = effectiveTime + uint256(DAY_IN_SECONDS * uint32(_daysUntilExpiration));
+      expirationTime = effectiveTime + (DAY_IN_SECONDS * uint256(_daysUntilExpiration));
       isExpired = false;
       sendEscrow(description, price, deposit, recipient);
   }
@@ -215,19 +215,3 @@ contract Escrow is USDConvert {
       emit DealTerminated(terminationReason);
   }
 }
-
-/*** to be revisited as escrow factory variant
-contract EscrowFactory {
-    address[] public deployedEscrows;
-    
-    //buyer or agent creates new escrow contract by submitting deposit and price amount along with at least as much ether as deposit value
-    function createEscrow(uint deposit, uint price) public payable {
-        require(msg.value >= deposit * 1 ether);
-        address newEscrow = address(new Escrow(deposit, price, msg.sender));
-        deployedEscrows.push(newEscrow);
-    }
-    
-    function getDeployedEscrows() public view returns (address[] memory) {
-        return deployedEscrows;
-    }
-}***/
