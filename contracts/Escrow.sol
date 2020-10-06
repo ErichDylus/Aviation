@@ -20,16 +20,12 @@ interface AggregatorV3Interface {
   event NewRound(uint256 indexed roundId, address indexed startedBy, uint256 startedAt);
 }
 
-//@dev use Chainlink ETH/USD price feed aggregator on Kovan to convert price
+//@dev use ETH/USD price feed aggregator on Kovan to convert price
 contract USDConvert {
 
     AggregatorV3Interface internal priceFeed;
 
-    /**
-     * Network: Kovan
-     * Aggregator: ETH/USD
-     * Address: 0x9326BFA02ADD2366b30bacB125260Af641031331
-     */
+    //Network: Kovan; Aggregator: ETH/USD; Address: 0x9326BFA02ADD2366b30bacB125260Af641031331
     constructor() public payable {
         priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
     }
@@ -89,7 +85,7 @@ contract Escrow is USDConvert {
   
   //restricts to agent (creator of escrow contract)
   modifier restricted() {
-    require(msg.sender == agent, "This may only be called by the Agent");
+    require(registeredAddresses[msg.sender] == true, "This may only be called by the Agent or the Escrow contract");
     _;
   }
   
@@ -177,9 +173,8 @@ contract Escrow is USDConvert {
   }
   
   //agent confirms conditions satisfied and finalizes transaction
-  function closeDeal(uint256 _index) public {
+  function closeDeal(uint256 _index) public restricted {
       InEscrow storage escrow = escrows[_index];
-      require(registeredAddresses[msg.sender] == true, "Caller not permitted");
       require(escrowAddress.balance >= price, "Funds not yet received");
       //require approvalCount be greater than or equal to number of approvers
       require(escrow.approvalCount >= approversCount, "All parties must confirm approval of closing");
