@@ -48,6 +48,7 @@ contract USDConvert {
 contract Escrow is USDConvert {
     
   using SafeMath for uint256;
+  using SafeMath for uint32;
   
   //escrow struct to contain basic description of underlying asset/deal, purchase price, ultimate recipient of funds, whether complete, number of parties
   struct InEscrow {
@@ -72,20 +73,19 @@ contract Escrow is USDConvert {
   uint256 index;
   uint256 effectiveTime;
   uint256 expirationTime;
-  uint256 constant DAY_IN_SECONDS = 86400;
+  uint32 constant DAY_IN_SECONDS = 86400;
   bool isExpired;
   string description;
   string terminationReason;
-  //map whether an address is a party to the transaction
+  //map whether an address is a party to the transaction and has authority 
   mapping(address => bool) public parties;
+  mapping(address => bool) registeredAddresses;
   
   //events for when party approves closing, purchase price received in escrow, deal closes, deal terminated
   event ReadyToClose(address approver);
   event FundsInEscrow(address buyer);
   event DealClosed();
-  event DealTerminated(string terminationReason);
-  //TODO: is separate expiration event necessary?
-  event Expired(uint256 expirationTime);
+  event DealTerminated(string terminationReason, bool isExpired);
   
   //restricts to agent (creator of escrow contract)
   modifier restricted() {
@@ -100,7 +100,6 @@ contract Escrow is USDConvert {
       //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
       ethPrice = uint256((getLatestPrice()));
       require(msg.value >= deposit, "Submit deposit amount");
-      require(_daysUntilExpiration > 0,"Expiry Date cannot be today");
       agent = _creator;
       //convert deposit and purchase price to wei from USD
       deposit = ((_deposit*10000000000)/ethPrice) * 10000000000000000;
@@ -108,10 +107,12 @@ contract Escrow is USDConvert {
       description = _description;
       recipient = _recipient;
       parties[agent] = true;
+      registeredAddresses[agent] = true;
+      registeredAddresses[escrowAddress] = true;
       approversCount = 1;
       index = 0;
       effectiveTime = now;
-      expirationTime = effectiveTime + (DAY_IN_SECONDS * uint256(_daysUntilExpiration));
+      expirationTime = effectiveTime + uint256(DAY_IN_SECONDS * uint32(_daysUntilExpiration));
       isExpired = false;
       sendEscrow(description, price, deposit, recipient);
   }
@@ -145,7 +146,7 @@ contract Escrow is USDConvert {
       require(_fundAmount <= msg.value, "Submit fundAmount");
       //require funds to come from party to transaction (likely buyer or financier)
       require(parties[msg.sender] == true, "Sender not approved party");
-      require(!isExpired, "Escrow has expired");
+      require(!isExpired, "Deal has expired");
       buyer = msg.sender;
       emit FundsInEscrow(buyer);
   }
@@ -176,8 +177,9 @@ contract Escrow is USDConvert {
   }
   
   //agent confirms conditions satisfied and finalizes transaction
-  function closeDeal(uint256 _index) public restricted {
+  function closeDeal(uint256 _index) public {
       InEscrow storage escrow = escrows[_index];
+      require(registeredAddresses[msg.sender] == true, "Caller not permitted");
       require(escrowAddress.balance >= price, "Funds not yet received");
       //require approvalCount be greater than or equal to number of approvers
       require(escrow.approvalCount >= approversCount, "All parties must confirm approval of closing");
@@ -189,10 +191,10 @@ contract Escrow is USDConvert {
   }
   
   //allows any party to check if expired (and if so, isExpired resolves true and will prevent closing)
-  function checkIfExpired() public returns(bool){
+  function checkIfExpired(uint256 _index) public returns(bool){
         if (expirationTime <= now) {
             isExpired = true;
-            emit Expired(expirationTime);
+            terminateDeal(_index, "Deal has Expired");
         } else {
             isExpired = false;
         }
@@ -212,6 +214,6 @@ contract Escrow is USDConvert {
       } 
       escrow.complete = true;
       terminationReason = _terminationReason;
-      emit DealTerminated(terminationReason);
+      emit DealTerminated(terminationReason, isExpired);
   }
 }
