@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.6.0;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
@@ -9,9 +11,9 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 
 contract Requirement is Ownable {
     
-    bool requirementSatisfied = false;
+    bool private requirementSatisfied = false;
     mapping(address => bool) favored;
-    address[] public whitelist;
+    address[] whitelist;
     string condition;
     
     event whitelistAdded(address indexed _addr);
@@ -47,13 +49,13 @@ contract Requirement is Ownable {
     } ***/
         
     //owner sets out Advance Requirement condition details or reference to provision in underlying documentation
-    function enterCondition(string memory _condition) public onlyOwner {
+    function enterCondition(string calldata _condition) external onlyOwner {
         require(!requirementSatisfied, "Advance Requirement already satisfied, details may not be changed");
         condition = _condition;
     }
 
     //check details of Advance Requirement / condition precedent
-    function conditionContext() public view returns(string memory) {
+    function conditionContext() external view returns(string memory) {
         return condition;
     }
 
