@@ -1,7 +1,7 @@
 /** draft aircraft sale agreement template drafted in OpenLaw's markup 
 for demonstration purposes only, not for commercial or any other use nor to be construed as any legal or financial advice
 this code is distributed WITHOUT ANY WARRANTY, including but not limited to any implied warranty of merchantibility or fitness for a particular purpose
-**/ see: https://lib.openlaw.io/web/default/template/Aircraft%20Sale%20Agreement
+see: https://lib.openlaw.io/web/default/template/Aircraft%20Sale%20Agreement **/
 
 // TODO: incorporate Escrow.sol, API triggers 
 
