@@ -83,14 +83,14 @@ contract Escrow is USDConvert {
   event DealClosed();
   event DealTerminated(string terminationReason, bool isExpired);
   
-  //restricts to agent (creator of escrow contract)
+  //restricts to agent (creator of escrow contract) or internal calls
   modifier restricted() {
-    require(registeredAddresses[msg.sender] == true, "This may only be called by the Agent or the Escrow contract");
+    require(registeredAddresses[msg.sender] == true, "This may only be called by the Agent or the escrow contract itself");
     _;
   }
   
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
-  //initiate escrow with escription, deposit amount in USD, purchase price in USD, assign creator as agent, and recipient (likely seller or financier)
+  //initiate escrow with description, USD deposit amount, USD purchase price, assign creator as agent, and designate recipient (likely seller or financier)
   constructor(string memory _description, uint256 _deposit, uint256 _price, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) public payable {
       priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
       //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
@@ -122,6 +122,7 @@ contract Escrow is USDConvert {
   
   //agent confirms recipient of escrowed funds as extra security measure, or if flow of funds changed since creation of escrow (likely seller or a lienholder)
   function approveRecipient(address payable _recipient) public restricted {
+      require(_recipient != recipient, "Party already designated as recipient");
       parties[_recipient] = true;
       approversCount++;
       recipient = _recipient;
@@ -133,7 +134,7 @@ contract Escrow is USDConvert {
         return ethPrice;
   }
   
-  //amount sent needs to >= total purchase price - deposit, either in one transfer or in chunks larger than deposit
+  //amount sent needs to >= total purchase price - deposit, either in one transfer or in installments larger than deposit
   //buyer must be cleared by agent first via approveParty(), to prevent unknown senders
   //in practice, sending total purchase amount would likely happen immediately before closeDeal()
   function sendFunds(uint256 _fundAmount) public payable {
@@ -167,6 +168,7 @@ contract Escrow is USDConvert {
       require(parties[msg.sender], "Approver must be a party");
       require(!escrow.approvals[msg.sender], "Already approved by this party");
       require(!isExpired, "Escrow has expired");
+      checkIfExpired(_index);
       escrow.approvals[msg.sender] = true;
       escrow.approvalCount++;
       emit ReadyToClose(msg.sender);
@@ -179,6 +181,7 @@ contract Escrow is USDConvert {
       //require approvalCount be greater than or equal to number of approvers
       require(escrow.approvalCount >= approversCount, "All parties must confirm approval of closing");
       require(!escrow.complete, "Deal already completed or terminated");
+      checkIfExpired(_index);
       //NOTE: closeDeal transfers entire escrow balance to recipient (including deposit)
       recipient.transfer(escrowAddress.balance);
       escrow.complete = true;
