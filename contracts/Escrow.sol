@@ -90,8 +90,8 @@ contract Escrow is USDConvert {
   }
   
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
-  //initiate escrow with description, USD deposit amount, USD purchase price, assign creator as agent, and designate recipient (likely seller or financier)
-  constructor(string memory _description, uint256 _deposit, uint256 _price, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) public payable {
+  //initiate escrow with description, USD deposit amount, USD purchase price, unique chosen index number, assign creator as agent, and designate recipient (likely seller or financier)
+  constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) public payable {
       priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
       //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
       ethPrice = uint256((getLatestPrice()));
@@ -106,7 +106,7 @@ contract Escrow is USDConvert {
       registeredAddresses[agent] = true;
       registeredAddresses[escrowAddress] = true;
       approversCount = 1;
-      index = 0;
+      index = _index;
       effectiveTime = now;
       expirationTime = effectiveTime + uint256(DAY_IN_SECONDS * uint32(_daysUntilExpiration));
       isExpired = false;
