@@ -4,7 +4,7 @@ pragma solidity ^0.6.0;
 
 //FOR DEMONSTRATION ONLY, not recommended to be used for any purpose
 //@dev create a smart escrow contract for purposes of an aircraft sale transaction
-//buyer or escrow agent creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier)
+//buyer or escrow agent creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier), days until expiry
 //other terms may be determined in offchain negotiations/documentation
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/math/SafeMath.sol";
@@ -90,7 +90,7 @@ contract Escrow is USDConvert {
   }
   
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
-  //initiate escrow with description, USD deposit amount, USD purchase price, unique chosen index number, assign creator as agent, and designate recipient (likely seller or financier)
+  //initiate escrow with description, USD deposit amount, USD purchase price, unique chosen index number, assign creator as agent, designate recipient (likely seller or financier), and term length
   constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) public payable {
       priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
       //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
