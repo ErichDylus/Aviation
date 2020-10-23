@@ -123,6 +123,7 @@ contract Escrow is USDConvert {
   //agent confirms recipient of escrowed funds as extra security measure, or if flow of funds changed since creation of escrow (likely seller or a lienholder)
   function approveRecipient(address payable _recipient) public restricted {
       require(_recipient != recipient, "Party already designated as recipient");
+      require(!isExpired, "Too late to change recipient");
       parties[_recipient] = true;
       approversCount++;
       recipient = _recipient;
