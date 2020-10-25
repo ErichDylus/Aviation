@@ -107,7 +107,7 @@ contract Escrow is USDConvert {
       registeredAddresses[escrowAddress] = true;
       approversCount = 1;
       index = _index;
-      effectiveTime = now;
+      effectiveTime = block.timestamp;
       expirationTime = effectiveTime + uint256(DAY_IN_SECONDS * uint32(_daysUntilExpiration));
       isExpired = false;
       sendEscrow(description, price, deposit, recipient);
@@ -191,7 +191,7 @@ contract Escrow is USDConvert {
   
   //allows any party to check if expired (and if so, isExpired resolves true and will prevent closing)
   function checkIfExpired(uint256 _index) public returns(bool){
-        if (expirationTime <= now) {
+        if (expirationTime <= block.timestamp) {
             isExpired = true;
             terminateDeal(_index, "Deal has Expired");
         } else {
