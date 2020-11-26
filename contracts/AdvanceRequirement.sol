@@ -21,6 +21,7 @@ contract Requirement is Ownable {
     
     //allow owner to assign favored status to address, address added to whitelist of favored party addresses
     function permitFavored(address _addr) public onlyOwner {
+        require(!favored[_addr], "Already favored");
         favored[_addr] = true;
         whitelist.push(_addr);
         emit whitelistAdded(_addr);
