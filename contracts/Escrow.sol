@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.8.0;
 
 //FOR DEMONSTRATION ONLY, not recommended to be used for any purpose
 //@dev create a smart escrow contract for purposes of an aircraft sale transaction
 //buyer or escrow agent creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier), days until expiry
 //other terms may be determined in offchain negotiations/documentation
-
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/math/SafeMath.sol";
 
 interface AggregatorV3Interface {
   function latestAnswer() external view returns (int256);
@@ -26,7 +24,7 @@ contract USDConvert {
     AggregatorV3Interface internal priceFeed;
 
     //Network: Kovan; Aggregator: ETH/USD; Address: 0x9326BFA02ADD2366b30bacB125260Af641031331
-    constructor() public payable {
+    constructor() payable {
         priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
     }
   
@@ -43,9 +41,6 @@ contract USDConvert {
 
 contract Escrow is USDConvert {
     
-  using SafeMath for uint256;
-  using SafeMath for uint32;
-  
   //escrow struct to contain basic description of underlying asset/deal, purchase price, ultimate recipient of funds, whether complete, number of parties
   struct InEscrow {
       string description;
@@ -54,7 +49,6 @@ contract Escrow is USDConvert {
       address payable recipient;
       bool complete;
       uint256 approvalCount;
-      mapping(address => bool) approvals;
   }
   
   InEscrow[] public escrows;
@@ -91,7 +85,7 @@ contract Escrow is USDConvert {
   
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
   //initiate escrow with description, USD deposit amount, USD purchase price, unique chosen index number, assign creator as agent, designate recipient (likely seller or financier), and term length
-  constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) public payable {
+  constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) payable {
       priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
       //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
       ethPrice = uint256((getLatestPrice()));
@@ -145,7 +139,6 @@ contract Escrow is USDConvert {
       //require funds to come from party to transaction (likely buyer or financier)
       require(parties[msg.sender] == true, "Sender not approved party");
       require(!isExpired, "Deal has expired");
-      buyer = msg.sender;
       emit FundsInEscrow(buyer);
   }
   
@@ -167,10 +160,8 @@ contract Escrow is USDConvert {
       InEscrow storage escrow = escrows[_index];
       //require approver is a party
       require(parties[msg.sender], "Approver must be a party");
-      require(!escrow.approvals[msg.sender], "Already approved by this party");
       require(!isExpired, "Escrow has expired");
       checkIfExpired(_index);
-      escrow.approvals[msg.sender] = true;
       escrow.approvalCount++;
       emit ReadyToClose(msg.sender);
   }
