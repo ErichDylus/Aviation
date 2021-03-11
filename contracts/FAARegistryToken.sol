@@ -20,7 +20,7 @@ contract FAARegistryToken is ERC721, Ownable {
       string nNumber, 
       uint256 regId, 
       uint256 msn, 
-      bool lienExists, 
+      bool lien, 
       bool fractionalOwner);
 
   struct Aircraft {
@@ -29,7 +29,7 @@ contract FAARegistryToken is ERC721, Ownable {
     string nNumber;
     uint256 regId;
     uint256 msn;
-    bool lienExists; 
+    bool lien; 
     bool fractionalOwner;
   }
 
@@ -50,7 +50,7 @@ contract FAARegistryToken is ERC721, Ownable {
         string memory _nNumber, 
         uint256 _regId, 
         uint256 _msn, 
-        bool _lienExists, 
+        bool _lien, 
         bool _fractionalOwner
         ) internal returns (uint256, uint256) {
     
@@ -60,14 +60,14 @@ contract FAARegistryToken is ERC721, Ownable {
         nNumber: _nNumber,
         regId: _regId,
         msn: _msn,
-        lienExists: _lienExists,
+        lien: _lien,
         fractionalOwner: _fractionalOwner
     });
     
-    // @dev create unique aircraft identifier based on owner reg ID, i number and msn
+    // @dev create unique aircraft identifier based on owner reg ID, i number and MSN
     // see: https://ethereum.stackexchange.com/questions/9965/how-to-generate-a-unique-identifier-in-solidity
     uint256 newAircraftId = uint256(keccak256(abi.encodePacked(_regId + i + _msn)));
-    aircraft.push(Aircraft(_aircraftOwner, _model, _nNumber,  _regId, _msn, _lienExists, _fractionalOwner));
+    aircraft.push(Aircraft(_aircraftOwner, _model, _nNumber,  _regId, _msn, _lien, _fractionalOwner));
     i++;
     super._mint(_aircraftOwner, newAircraftId);
     emit CreateAircraft(
@@ -76,7 +76,7 @@ contract FAARegistryToken is ERC721, Ownable {
         newAircraft.nNumber, 
         newAircraft.regId, 
         newAircraft.msn, 
-        newAircraft.lienExists, 
+        newAircraft.lien, 
         newAircraft.fractionalOwner
         );
     return(newAircraftId, i);
@@ -90,7 +90,7 @@ contract FAARegistryToken is ERC721, Ownable {
         regToken.model, 
         regToken.nNumber, 
         regToken.msn, 
-        regToken.lienExists, 
+        regToken.lien, 
         regToken.fractionalOwner
         );
   }
@@ -104,11 +104,11 @@ contract FAARegistryToken is ERC721, Ownable {
         string calldata _nNumber, 
         uint256 _regId, 
         uint256 _msn, 
-        bool _lienExists, 
+        bool _lien, 
         bool _fractionalOwner
         ) external payable returns(uint) {
     require(msg.value >= 0.01 ether, "Please submit .01 ETH for a Registry Token");
-    _createAircraft(msg.sender, _model, _nNumber, _regId, _msn, _lienExists, _fractionalOwner);
+    _createAircraft(msg.sender, _model, _nNumber, _regId, _msn, _lien, _fractionalOwner);
     }
     
     // @dev allow onlyOwner (presumably the Registry) to burn a registry token, for example if the aircraft is deregistered
