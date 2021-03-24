@@ -1,7 +1,7 @@
 # Aviation
 Code cleared for test flight takeoff
 
-[Escrow](https://github.com/ErichDylus/Aviation/blob/master/contracts/Escrow.sol) - smart escrow contract for an aircraft sale/beneficial interest transfer transaction
+Escrow[ETH](https://github.com/ErichDylus/Aviation/blob/master/contracts/EscrowETH.sol)|[USDC](https://github.com/ErichDylus/Aviation/blob/master/contracts/EscrowUSDC.sol) - smart escrow contract for an aircraft sale/beneficial interest transfer transaction, payment in ETH or USDC
 
 [FAA Token](https://github.com/ErichDylus/Aviation/blob/master/contracts/FAARegistryToken.sol) - ERC721 standard NFT for N-registered aircraft, for purposes of evidence of FAA registration
 
