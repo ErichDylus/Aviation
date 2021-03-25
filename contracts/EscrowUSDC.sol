@@ -56,6 +56,21 @@ contract Escrow {
   //initiate escrow with description, USD deposit amount, USD purchase price, unique chosen index number, assign creator as agent, designate recipient (likely seller or financier), and term length
   constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) payable {
       require(msg.value >= deposit, "Submit deposit amount");
+      //Approve USDC
+      //tracker_0x_address is the address of the ERC20 contract they want to deposit tokens from ( ContractA )
+        // spender is deployed escrow contract address
+      ERC20(USDC_0x_address).approve(address escrowAddress, uint tokens)
+      
+      //Deposit USDC
+      mapping ( address => uint256 ) public balances;
+deposit(uint tokens) {
+
+  // add the deposited tokens into existing balance 
+  balances[msg.sender]+= tokens;
+
+  // transfer the tokens from the sender to this contract
+  ERC20(tracker_0x_address).transferFrom(msg.sender, escrowAddress, tokens);
+}
       agent = _creator;
       //convert deposit and purchase price to wei from USD
       deposit = (_deposit*10000000000) * 10000000000000000;
