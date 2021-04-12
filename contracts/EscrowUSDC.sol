@@ -5,8 +5,8 @@ pragma solidity ^0.8.0;
 
 //FOR DEMONSTRATION ONLY, not recommended to be used for any purpose
 //@dev create a smart escrow contract for purposes of an aircraft sale transaction
-//buyer or escrow agent creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier), days until expiry
-//other terms may be determined in offchain negotiations/documentation
+//buyer or agent (likely party to handle any meatspace filings) creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier), days until expiry
+//other terms may be determined in offchain negotiations/documentation and memorialized by hash to IPFS or other decentralized file storage
 
 contract Escrow {
     
@@ -54,6 +54,7 @@ contract Escrow {
   // TODO: adapt for USDC payments
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
   //initiate escrow with description, USD deposit amount, USD purchase price, unique chosen index number, assign creator as agent, designate recipient (likely seller or financier), and term length
+  //agent for purposes of this contract could be the entity handling meatspace filings (could be party to transaction or filing agent)
   constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) payable {
       require(msg.value >= deposit, "Submit deposit amount");
       //Approve USDC
@@ -61,15 +62,13 @@ contract Escrow {
         // spender is deployed escrow contract address
       ERC20(USDC_0x_address).approve(address escrowAddress, uint tokens)
       
-      //Deposit USDC
+      /** In Process ** Deposit USDC
       mapping ( address => uint256 ) public balances;
-deposit(uint tokens) {
-
-  // add the deposited tokens into existing balance 
-  balances[msg.sender]+= tokens;
-
-  // transfer the tokens from the sender to this contract
-  ERC20(tracker_0x_address).transferFrom(msg.sender, escrowAddress, tokens);
+      deposit(uint tokens) {
+      // add the deposited tokens into existing balance 
+      balances[msg.sender]+= tokens;
+      // transfer the tokens from the sender to this contract
+      ERC20(tracker_0x_address).transferFrom(msg.sender, escrowAddress, tokens); **/
 }
       agent = _creator;
       //convert deposit and purchase price to wei from USD
