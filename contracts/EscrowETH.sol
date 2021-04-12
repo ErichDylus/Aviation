@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 
 //FOR DEMONSTRATION ONLY, not recommended to be used for any purpose
 //@dev create a smart escrow contract for purposes of an aircraft sale transaction
-//buyer or escrow agent creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier), days until expiry
-//other terms may be determined in offchain negotiations/documentation
+//buyer or agent (likely party to handle any meatspace filings) creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier), days until expiry
+//other terms may be determined in offchain negotiations/documentation and memorialized by hash to IPFS or other decentralized file storage
 
 interface AggregatorV3Interface {
   function latestAnswer() external view returns (int256);
@@ -18,7 +18,7 @@ interface AggregatorV3Interface {
   event NewRound(uint256 indexed roundId, address indexed startedBy, uint256 startedAt);
 }
 
-//@dev use ETH/USD price feed aggregator on Kovan to convert price
+//@dev use ETH/USD price feed aggregator on Kovan to convert price, to be updated to relevant dAPI when live
 contract USDConvert {
 
     AggregatorV3Interface internal priceFeed;
