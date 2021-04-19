@@ -48,6 +48,7 @@ contract EthEscrow {
       description = _description;
       seller = _seller;
       parties[msg.sender] = true;
+      parties[_seller] = true;
       parties[escrowAddress] = true;
       effectiveTime = uint256(block.timestamp);
       expirationTime = effectiveTime + _secsUntilExpiration;
