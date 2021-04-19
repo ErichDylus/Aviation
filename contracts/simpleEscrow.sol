@@ -4,9 +4,7 @@ pragma solidity ^0.8.0;
 
 //FOR DEMONSTRATION ONLY, not recommended to be used on mainnet
 //@dev create a simple smart escrow contract for testing purposes, with ETH as payment and expiration denominated in seconds
-//should be deployed by buyer
-//TODO: check if buyer and seller have approved closing before closeDeal()
-
+//should be deployed by buyer (as funds are placed in escrow upon deployment, and returned to deployer if expired)
 
 contract EthEscrow {
     
