@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-//FOR DEMONSTRATION ONLY, not recommended to be used on mainnet
-//@dev create a simple smart escrow contract for testing purposes, with ETH as payment and expiration denominated in seconds
-//should be deployed by buyer (as funds are placed in escrow upon deployment, and returned to deployer if expired)
+//FOR DEMONSTRATION ONLY, not recommended to be used for any purpose and provided with no warranty whatsoever
+/*@dev create a simple smart escrow contract for testing purposes, with ETH as payment and expiration denominated in seconds
+**intended to be deployed by buyer (as funds are placed in escrow upon deployment, and returned to deployer if expired) */
 
 contract EthEscrow {
     
@@ -27,7 +27,7 @@ contract EthEscrow {
   bool isExpired;
   bool isClosed;
   string description;
-  //map whether an address is a party to the transaction and has authority 
+  //map whether an address is a party to the transaction for restricted() modifier 
   mapping(address => bool) public parties;
   
   event DealExpired();
@@ -39,10 +39,10 @@ contract EthEscrow {
     _;
   }
   
-  //creator of escrow contract is buyer and contributes deposit
-  //initiate escrow with description, deposit, and designate recipient seller
+  //creator contributes deposit and initiates escrow with description, deposit amount, and designate recipient seller
   constructor(string memory _description, uint256 _deposit, address payable _seller, uint256 _secsUntilExpiration) payable {
       require(msg.value >= deposit, "Submit deposit amount");
+      require(_seller != msg.sender, "Designate different party as seller");
       buyer = payable(address(msg.sender));
       deposit = _deposit;
       description = _description;
@@ -61,6 +61,7 @@ contract EthEscrow {
   //buyer confirms seller's recipient oddress of escrowed funds as extra security measure
   function designateSeller(address payable _seller) public restricted {
       require(_seller != seller, "Party already designated as seller");
+      require(_seller != buyer, "Buyer cannot also be seller");
       require(!isExpired, "Too late to change seller");
       parties[_seller] = true;
       seller = _seller;
