@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
-// IN PROCESS
+// IN PROCESS, ***** KOVAN VERSION *****
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.6.0;
 
-//FOR DEMONSTRATION ONLY, not recommended to be used for any purpose
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.0/contracts/token/ERC20/ERC20.sol";
+
+//FOR KOVAN DEMONSTRATION ONLY, not recommended to be used for any purpose
 //@dev create a smart escrow contract for purposes of an aircraft sale transaction
 //buyer or agent (likely party to handle any meatspace filings) creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier), days until expiry
 //other terms may be determined in offchain negotiations/documentation and memorialized by hash to IPFS or other decentralized file storage
@@ -25,6 +27,7 @@ contract Escrow {
   address payable agent;
   address payable buyer;
   address payable recipient;
+  address usdc = 0xe22da380ee6B445bb8273C81944ADEB6E8450422;
   uint256 price;
   uint256 deposit;
   uint256 approversCount;
@@ -55,25 +58,20 @@ contract Escrow {
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
   //initiate escrow with description, USD deposit amount, USD purchase price, unique chosen index number, assign creator as agent, designate recipient (likely seller or financier), and term length
   //agent for purposes of this contract could be the entity handling meatspace filings (could be party to transaction or filing agent)
-  constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) payable {
-      require(msg.value >= deposit, "Submit deposit amount");
-      //Approve USDC
-      //tracker_0x_address is the address of the ERC20 contract they want to deposit tokens from ( ContractA )
-        // spender is deployed escrow contract address
-      ERC20(USDC_0x_address).approve(address escrowAddress, uint tokens)
+  constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) public payable {
+      //approve Kovan USDC
+      ERC20(usdc).approve(escrowAddress, deposit);
+      // transfer deposit amount of USDC from the sender to escrow
+      ERC20(usdc).transferFrom(msg.sender, escrowAddress, deposit);
       
       /** In Process ** Deposit USDC
       mapping ( address => uint256 ) public balances;
       deposit(uint tokens) {
       // add the deposited tokens into existing balance 
-      balances[msg.sender]+= tokens;
-      // transfer the tokens from the sender to this contract
-      ERC20(tracker_0x_address).transferFrom(msg.sender, escrowAddress, tokens); **/
-}
+      balances[msg.sender]+= tokens; **/
       agent = _creator;
-      //convert deposit and purchase price to wei from USD
-      deposit = (_deposit*10000000000) * 10000000000000000;
-      price = (_price*10000000000) * 10000000000000000;
+      deposit = _deposit;
+      price = _price;
       description = _description;
       recipient = _recipient;
       parties[agent] = true;
@@ -109,10 +107,11 @@ contract Escrow {
   function sendFunds(uint256 _fundAmount) public payable {
       //funds must be sent in one transaction, and must be greater than or equal to the purchase price - deposit
       require(_fundAmount >= price - deposit, "fundAmount must satisfy outstanding amount of purchase price, minus deposit already received");
-      require(_fundAmount <= msg.value, "Submit fundAmount");
       //require funds to come from party to transaction (likely buyer or financier)
       require(parties[msg.sender] == true, "Sender not approved party");
       require(!isExpired, "Deal has expired");
+      // transfer deposit amount of USDC from the sender to escrow
+      ERC20(usdc).transferFrom(msg.sender, escrowAddress, _fundAmount);
       emit FundsInEscrow(buyer);
   }
   
@@ -150,6 +149,7 @@ contract Escrow {
       checkIfExpired(_index);
       //NOTE: closeDeal transfers entire escrow balance to recipient (including deposit)
       recipient.transfer(escrowAddress.balance);
+      ERC20(usdc).transferFrom(escrowAddress, recipient, deposit);
       escrow.complete = true;
       emit DealClosed();
   }
@@ -173,8 +173,10 @@ contract Escrow {
       //NOTE: if buyer has sent remainder of purchase price, if agent terminates escrow the entire balance (including deposit) is remitted to buyer
       if (parties[buyer] == true) {
           buyer.transfer(escrowAddress.balance);
+          ERC20(usdc).transferFrom(escrowAddress, buyer, deposit);
       } else {
           agent.transfer(escrowAddress.balance);
+          ERC20(usdc).transferFrom(escrowAddress, agent, deposit);
       } 
       escrow.complete = true;
       terminationReason = _terminationReason;
