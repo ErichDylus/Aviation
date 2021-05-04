@@ -27,7 +27,7 @@ contract Escrow {
   address payable agent;
   address payable buyer;
   address payable recipient;
-  address usdc = 0xe22da380ee6B445bb8273C81944ADEB6E8450422;
+  address constant usdc = 0xe22da380ee6B445bb8273C81944ADEB6E8450422;
   uint256 price;
   uint256 deposit;
   uint256 approversCount;
@@ -38,7 +38,7 @@ contract Escrow {
   bool isExpired;
   string description;
   string terminationReason;
-  //map whether an address is a party to the transaction and has authority 
+  //map whether an address is a party to the transaction and has authority for restricted modifier
   mapping(address => bool) public parties;
   mapping(address => bool) registeredAddresses;
   
@@ -54,21 +54,15 @@ contract Escrow {
     _;
   }
   
-  // TODO: adapt for USDC payments
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
   //initiate escrow with description, USD deposit amount, USD purchase price, unique chosen index number, assign creator as agent, designate recipient (likely seller or financier), and term length
   //agent for purposes of this contract could be the entity handling meatspace filings (could be party to transaction or filing agent)
   constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) public payable {
-      //approve Kovan USDC
-      ERC20(usdc).approve(escrowAddress, deposit);
+      //approve Kovan USDC for full purchase price amount
+      ERC20(usdc).approve(msg.sender, price);
+      ERC20(usdc).approve(escrowAddress, price);
       // transfer deposit amount of USDC from the sender to escrow
       ERC20(usdc).transferFrom(msg.sender, escrowAddress, deposit);
-      
-      /** In Process ** Deposit USDC
-      mapping ( address => uint256 ) public balances;
-      deposit(uint tokens) {
-      // add the deposited tokens into existing balance 
-      balances[msg.sender]+= tokens; **/
       agent = _creator;
       deposit = _deposit;
       price = _price;
@@ -142,14 +136,14 @@ contract Escrow {
   //agent confirms conditions satisfied and finalizes transaction
   function closeDeal(uint256 _index) public restricted {
       InEscrow storage escrow = escrows[_index];
-      require(escrowAddress.balance >= price, "Funds not yet received");
+      //require escrow to hold at least as much USDC as the price in order to close
+      require(ERC20(usdc).balanceOf(escrowAddress) >= price, "Funds not yet received");
       //require approvalCount be greater than or equal to number of approvers
       require(escrow.approvalCount >= approversCount, "All parties must confirm approval of closing");
       require(!escrow.complete, "Deal already completed or terminated");
       checkIfExpired(_index);
-      //NOTE: closeDeal transfers entire escrow balance to recipient (including deposit)
-      recipient.transfer(escrowAddress.balance);
-      ERC20(usdc).transferFrom(escrowAddress, recipient, deposit);
+      //transfer entire escrowed USDC balance to recipient 
+      ERC20(usdc).transferFrom(escrowAddress, recipient, ERC20(usdc).balanceOf(escrowAddress));
       escrow.complete = true;
       emit DealClosed();
   }
@@ -173,10 +167,10 @@ contract Escrow {
       //NOTE: if buyer has sent remainder of purchase price, if agent terminates escrow the entire balance (including deposit) is remitted to buyer
       if (parties[buyer] == true) {
           buyer.transfer(escrowAddress.balance);
-          ERC20(usdc).transferFrom(escrowAddress, buyer, deposit);
+          ERC20(usdc).transferFrom(escrowAddress, buyer, ERC20(usdc).balanceOf(escrowAddress));
       } else {
           agent.transfer(escrowAddress.balance);
-          ERC20(usdc).transferFrom(escrowAddress, agent, deposit);
+          ERC20(usdc).transferFrom(escrowAddress, agent, ERC20(usdc).balanceOf(escrowAddress));
       } 
       escrow.complete = true;
       terminationReason = _terminationReason;
