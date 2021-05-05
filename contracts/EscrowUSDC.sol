@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// IN PROCESS, ***** KOVAN VERSION *****
+// ***** KOVAN VERSION *****
 
 pragma solidity ^0.6.0;
 
@@ -27,6 +27,7 @@ contract Escrow {
   address payable agent;
   address payable buyer;
   address payable recipient;
+  // Kovan USDC contract address
   address constant usdc = 0xe22da380ee6B445bb8273C81944ADEB6E8450422;
   uint256 price;
   uint256 deposit;
@@ -55,7 +56,7 @@ contract Escrow {
   }
   
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
-  //initiate escrow with description, USD deposit amount, USD purchase price, unique chosen index number, assign creator as agent, designate recipient (likely seller or financier), and term length
+  //initiate escrow with description, USD deposit amount, USD purchase price, unique deal index number, assign creator as agent, designate recipient (likely seller or financier), and term length
   //agent for purposes of this contract could be the entity handling meatspace filings (could be party to transaction or filing agent)
   constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) public payable {
       //approve Kovan USDC for full purchase price amount
