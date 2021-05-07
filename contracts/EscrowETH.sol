@@ -79,7 +79,7 @@ contract Escrow is USDConvert {
   
   //restricts to agent (creator of escrow contract) or internal calls
   modifier restricted() {
-    require(registeredAddresses[msg.sender] == true, "This may only be called by the Agent or the escrow contract itself");
+    require(registeredAddresses[msg.sender], "This may only be called by the Agent or the escrow contract itself");
     _;
   }
   
@@ -137,7 +137,7 @@ contract Escrow is USDConvert {
       require(_fundAmount >= price - deposit, "fundAmount must satisfy outstanding amount of purchase price, minus deposit already received");
       require(_fundAmount <= msg.value, "Submit fundAmount");
       //require funds to come from party to transaction (likely buyer or financier)
-      require(parties[msg.sender] == true, "Sender not approved party");
+      require(parties[msg.sender], "Sender not approved party");
       require(!isExpired, "Deal has expired");
       emit FundsInEscrow(buyer);
   }
@@ -197,7 +197,7 @@ contract Escrow is USDConvert {
       require(!escrow.complete, "Deal already completed or terminated");
       //return funds to buyer (if a different address than agent as assigned via sendFunds()), otherwise return to agent (likely only deposit)
       //NOTE: if buyer has sent remainder of purchase price, if agent terminates escrow the entire balance (including deposit) is remitted to buyer
-      if (parties[buyer] == true) {
+      if (parties[buyer]) {
           buyer.transfer(escrowAddress.balance);
       } else {
           agent.transfer(escrowAddress.balance);
