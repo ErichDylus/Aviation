@@ -13,16 +13,7 @@ interface LexLocker { // LexLocker interface
     function requestLockerResolution(address counterparty, address resolver, address token, uint256 sum, string calldata details, bool swiftResolver) external payable returns (uint256);
 }
 
-/*contract sendDispute {
-
-    LexLockerInterface internal lexlocker;
-
-    constructor() payable {
-        lexlocker = LexLockerInterface(0xD476595aa1737F5FdBfE9C8FEa17737679D9f89a);
-    }
-}*/
-
-contract EthEscrow is LexLocker{
+contract EthEscrow {
     
   //escrow struct to contain basic description of underlying deal, purchase price, ultimate recipient of funds
   struct InEscrow {
@@ -42,15 +33,16 @@ contract EthEscrow is LexLocker{
   uint256 expirationTime;
   bool sellerApproved;
   bool buyerApproved;
+  bool isDisputed;
   bool isExpired;
   bool isClosed;
   string description;
   //map whether an address is a party to the transaction for restricted() modifier 
   mapping(address => bool) public parties;
   
-  event DealDisputed();
-  event DealExpired();
-  event DealClosed();
+  event DealDisputed(address indexed sender, bool isDisputed);
+  event DealExpired(bool isExpired);
+  event DealClosed(bool isClosed);
   
   //restricts to agent (creator of escrow contract) or internal calls
   modifier restricted() {
@@ -101,7 +93,7 @@ contract EthEscrow is LexLocker{
         if (expirationTime <= uint256(block.timestamp)) {
             isExpired = true;
             buyer.transfer(escrowAddress.balance);
-            emit DealExpired();
+            emit DealExpired(isExpired);
         } else {
             isExpired = false;
         }
@@ -115,13 +107,15 @@ contract EthEscrow is LexLocker{
       if (msg.sender == seller) {
             LexLocker(lexlocker).requestLockerResolution(buyer, lexDAO, _token, deposit, _details, _singleArbiter);
             lexlocker.transfer(escrowAddress.balance);
+            isDisputed = true;
+            emit DealDisputed(seller, isDisputed);
             return("Seller has initiated LexLocker dispute resolution.");
-            emit DealDisputed();
         } else if (msg.sender == buyer) {
             LexLocker(lexlocker).requestLockerResolution(seller, lexDAO, _token, deposit, _details, _singleArbiter);
             lexlocker.transfer(escrowAddress.balance); //  presumably balance only holds the deposit amount if buyer is initiating dispute
+            isDisputed = true;
+            emit DealDisputed(buyer, isDisputed);
             return("Buyer has initiated Lexlocker dispute resolution.");
-            emit DealDisputed();
         } else {
             return("You are neither buyer nor seller.");
         }
@@ -145,11 +139,11 @@ contract EthEscrow is LexLocker{
       if (expirationTime <= uint256(block.timestamp)) {
             isExpired = true;
             buyer.transfer(escrowAddress.balance);
-            emit DealExpired();
+            emit DealExpired(isExpired);
         } else {
             isClosed = true;
             seller.transfer(escrowAddress.balance);
-            emit DealClosed();
+            emit DealClosed(isClosed);
         }
         return(isClosed);
   }
