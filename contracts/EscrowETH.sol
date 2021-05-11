@@ -1,209 +1,156 @@
-// SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.0;
 
-//FOR DEMONSTRATION ONLY, not recommended to be used for any purpose
-//@dev create a smart escrow contract for purposes of an aircraft sale transaction
-//buyer or agent (likely party to handle any meatspace filings) creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier), days until expiry
-//other terms may be determined in offchain negotiations/documentation and memorialized by hash to IPFS or other decentralized file storage
+import "https://github.com/lexDAO/LexCorpus/blob/master/contracts/escrow/lexlocker/solidity/LexLocker.sol";
 
-interface AggregatorV3Interface {
-  function latestAnswer() external view returns (int256);
-  function latestTimestamp() external view returns (uint256);
-  function latestRound() external view returns (uint256);
-  function getAnswer(uint256 roundId) external view returns (int256);
-  function getTimestamp(uint256 roundId) external view returns (uint256);
+//FOR DEMONSTRATION ONLY, not recommended to be used for any purpose and provided with no warranty whatsoever
+/*@dev create a simple smart escrow contract for testing purposes, with ETH as payment and expiration denominated in seconds
+**intended to be deployed by buyer (as funds are placed in escrow upon deployment, and returned to deployer if expired) 
+**LexLocker arbitration integration in process*/
 
-  event AnswerUpdated(int256 indexed current, uint256 indexed roundId, uint256 updatedAt);
-  event NewRound(uint256 indexed roundId, address indexed startedBy, uint256 startedAt);
+interface LexLocker { // LexLocker interface 
+    function requestLockerResolution(address counterparty, address resolver, address token, uint256 sum, string calldata details, bool swiftResolver) external payable returns (uint256);
 }
 
-//@dev use ETH/USD price feed aggregator on Kovan to convert price, to be updated to relevant dAPI when live
-contract USDConvert {
+/*contract sendDispute {
 
-    AggregatorV3Interface internal priceFeed;
+    LexLockerInterface internal lexlocker;
 
-    //Network: Kovan; Aggregator: ETH/USD; Address: 0x9326BFA02ADD2366b30bacB125260Af641031331
     constructor() payable {
-        priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
+        lexlocker = LexLockerInterface(0xD476595aa1737F5FdBfE9C8FEa17737679D9f89a);
     }
-  
-    //returns the latest ETH price
-    function getLatestPrice() public view returns (int256) {
-        return priceFeed.latestAnswer();
-    }
+}*/
 
-    //returns the timestamp of the latest price update
-    function getLatestPriceTimestamp() public view returns (uint256) {
-        return priceFeed.latestTimestamp();
-    }
-}
-
-contract Escrow is USDConvert {
+contract EthEscrow is LexLocker{
     
-  //escrow struct to contain basic description of underlying asset/deal, purchase price, ultimate recipient of funds, whether complete, number of parties
+  //escrow struct to contain basic description of underlying deal, purchase price, ultimate recipient of funds
   struct InEscrow {
       string description;
-      uint256 price;
       uint256 deposit;
-      address payable recipient;
-      bool complete;
-      uint256 approvalCount;
+      address payable seller;
   }
   
   InEscrow[] public escrows;
   address escrowAddress = address(this);
-  address payable agent;
+  address payable lexlocker = payable(0xD476595aa1737F5FdBfE9C8FEa17737679D9f89a);
+  address payable lexDAO = payable(0x01B92E2C0D06325089c6Fd53C98a214f5C75B2aC);
   address payable buyer;
-  address payable recipient;
-  uint256 ethPrice;
-  uint256 price;
+  address payable seller;
   uint256 deposit;
-  uint256 approversCount;
-  uint256 index;
   uint256 effectiveTime;
   uint256 expirationTime;
-  uint32 constant DAY_IN_SECONDS = 86400;
+  bool sellerApproved;
+  bool buyerApproved;
   bool isExpired;
+  bool isClosed;
   string description;
-  string terminationReason;
-  //map whether an address is a party to the transaction and has authority 
+  //map whether an address is a party to the transaction for restricted() modifier 
   mapping(address => bool) public parties;
-  mapping(address => bool) registeredAddresses;
   
-  //events for when party approves closing, purchase price received in escrow, deal closes, deal terminated
-  event ReadyToClose(address approver);
-  event FundsInEscrow(address buyer);
+  event DealDisputed();
+  event DealExpired();
   event DealClosed();
-  event DealTerminated(string terminationReason, bool isExpired);
   
   //restricts to agent (creator of escrow contract) or internal calls
   modifier restricted() {
-    require(registeredAddresses[msg.sender], "This may only be called by the Agent or the escrow contract itself");
+    require(parties[msg.sender], "This may only be called by a party to the deal or the escrow contract itself");
     _;
   }
   
-  //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
-  //initiate escrow with description, USD deposit amount, USD purchase price, unique chosen index number, assign creator as agent, designate recipient (likely seller or financier), and term length
-  constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) payable {
-      priceFeed = AggregatorV3Interface(0x9326BFA02ADD2366b30bacB125260Af641031331);
-      //get price of ETH in dollars, rounded to nearest dollar, when escrow constructed/value sent
-      ethPrice = uint256((getLatestPrice()));
+  //creator contributes deposit and initiates escrow with description, deposit amount, and designate recipient seller
+  constructor(string memory _description, uint256 _deposit, address payable _seller, uint256 _secsUntilExpiration) payable {
       require(msg.value >= deposit, "Submit deposit amount");
-      agent = _creator;
-      //convert deposit and purchase price to wei from USD
-      deposit = ((_deposit*10000000000)/ethPrice) * 10000000000000000;
-      price = ((_price*10000000000)/ethPrice) * 10000000000000000;
+      require(_seller != msg.sender, "Designate different party as seller");
+      buyer = payable(address(msg.sender));
+      deposit = _deposit;
       description = _description;
-      recipient = _recipient;
-      parties[agent] = true;
-      registeredAddresses[agent] = true;
-      registeredAddresses[escrowAddress] = true;
-      approversCount = 1;
-      index = _index;
-      effectiveTime = block.timestamp;
-      expirationTime = effectiveTime + uint256(DAY_IN_SECONDS * uint32(_daysUntilExpiration));
+      seller = _seller;
+      parties[msg.sender] = true;
+      parties[_seller] = true;
+      parties[escrowAddress] = true;
+      effectiveTime = uint256(block.timestamp);
+      expirationTime = effectiveTime + _secsUntilExpiration;
       isExpired = false;
-      sendEscrow(description, price, deposit, recipient);
+      sellerApproved = false;
+      buyerApproved = false;
+      sendEscrow(description, deposit, seller);
   }
   
-  //agent confirms who are parties to the deal and therefore approvers to whether deal may ultimately close
-  function approveParty(address _party) public restricted {
-      require(!parties[_party], "Party already approved");
-      parties[_party] = true;
-      approversCount++;
+  //buyer confirms seller's recipient oddress of escrowed funds as extra security measure
+  function designateSeller(address payable _seller) public restricted {
+      require(_seller != seller, "Party already designated as seller");
+      require(_seller != buyer, "Buyer cannot also be seller");
+      require(!isExpired, "Too late to change seller");
+      parties[_seller] = true;
+      seller = _seller;
   }
   
-  //agent confirms recipient of escrowed funds as extra security measure, or if flow of funds changed since creation of escrow (likely seller or a lienholder)
-  function approveRecipient(address payable _recipient) public restricted {
-      require(_recipient != recipient, "Party already designated as recipient");
-      require(!isExpired, "Too late to change recipient");
-      parties[_recipient] = true;
-      approversCount++;
-      recipient = _recipient;
-  }
-  
-  
-  //check ETH price in dollars, rounded to nearest dollar
-  function checkPrice() public view returns (uint256) {
-        return ethPrice;
-  }
-  
-  //amount sent needs to >= total purchase price - deposit, either in one transfer or in installments larger than deposit
-  //buyer must be cleared by agent first via approveParty(), to prevent unknown senders
-  //in practice, sending total purchase amount would likely happen immediately before closeDeal()
-  function sendFunds(uint256 _fundAmount) public payable {
-      //funds must be sent in one transaction, and must be greater than or equal to the purchase price - deposit
-      require(_fundAmount >= price - deposit, "fundAmount must satisfy outstanding amount of purchase price, minus deposit already received");
-      require(_fundAmount <= msg.value, "Submit fundAmount");
-      //require funds to come from party to transaction (likely buyer or financier)
-      require(parties[msg.sender], "Sender not approved party");
-      require(!isExpired, "Deal has expired");
-      emit FundsInEscrow(buyer);
-  }
-  
-  //create new escrow contract within master structure, e.g. for split closings or separate deliveries
-  function sendEscrow(string memory _description, uint256 _price, uint256 _deposit, address payable _recipient) public restricted {
+  //create new escrow contract within master structure
+  function sendEscrow(string memory _description, uint256 _deposit, address payable _seller) private restricted {
       InEscrow memory newRequest = InEscrow({
          description: _description,
-         price: _price,
          deposit: _deposit,
-         recipient: _recipient,
-         complete: false,
-         approvalCount: 0
+         seller: _seller
       });
       escrows.push(newRequest);
   }
   
-  //allow each approver (party to deal) confirm ready for closing
-  function approveClosing(uint256 _index) public {
-      InEscrow storage escrow = escrows[_index];
-      //require approver is a party
-      require(parties[msg.sender], "Approver must be a party");
-      require(!isExpired, "Escrow has expired");
-      checkIfExpired(_index);
-      escrow.approvalCount++;
-      emit ReadyToClose(msg.sender);
-  }
-  
-  //agent confirms conditions satisfied and finalizes transaction
-  function closeDeal(uint256 _index) public restricted {
-      InEscrow storage escrow = escrows[_index];
-      require(escrowAddress.balance >= price, "Funds not yet received");
-      //require approvalCount be greater than or equal to number of approvers
-      require(escrow.approvalCount >= approversCount, "All parties must confirm approval of closing");
-      require(!escrow.complete, "Deal already completed or terminated");
-      checkIfExpired(_index);
-      //NOTE: closeDeal transfers entire escrow balance to recipient (including deposit)
-      recipient.transfer(escrowAddress.balance);
-      escrow.complete = true;
-      emit DealClosed();
-  }
-  
-  //allows any party to check if expired (and if so, isExpired resolves true and will prevent closing)
-  function checkIfExpired(uint256 _index) public returns(bool){
-        if (expirationTime <= block.timestamp) {
+  //check if expired, and if so, return balance to buyer
+  function checkIfExpired() public returns(bool){
+        if (expirationTime <= uint256(block.timestamp)) {
             isExpired = true;
-            terminateDeal(_index, "Deal has Expired");
+            buyer.transfer(escrowAddress.balance);
+            emit DealExpired();
         } else {
             isExpired = false;
         }
         return(isExpired);
     }
-  
-  //only agent may terminate deal, providing a reason for termination and will retain deposit
-  function terminateDeal(uint256 _index, string memory _terminationReason) public restricted {
-      InEscrow storage escrow = escrows[_index];
-      require(!escrow.complete, "Deal already completed or terminated");
-      //return funds to buyer (if a different address than agent as assigned via sendFunds()), otherwise return to agent (likely only deposit)
-      //NOTE: if buyer has sent remainder of purchase price, if agent terminates escrow the entire balance (including deposit) is remitted to buyer
-      if (parties[buyer]) {
-          buyer.transfer(escrowAddress.balance);
-      } else {
-          agent.transfer(escrowAddress.balance);
-      } 
-      escrow.complete = true;
-      terminationReason = _terminationReason;
-      emit DealTerminated(terminationReason, isExpired);
+    
+  // for early termination by either buyer or seller due to claimed breach of the other party, claiming party requests LexLocker resolution
+  // deposit either returned to buyer or remitted to seller as liquidated damages
+  function disputeDeal(address _token, string calldata _details, bool _singleArbiter) public restricted returns(string memory){
+      require(!isClosed && !isExpired, "Too late for early termination");
+      if (msg.sender == seller) {
+            LexLocker(lexlocker).requestLockerResolution(buyer, lexDAO, _token, deposit, _details, _singleArbiter);
+            lexlocker.transfer(escrowAddress.balance);
+            return("Seller has initiated LexLocker dispute resolution.");
+            emit DealDisputed();
+        } else if (msg.sender == buyer) {
+            LexLocker(lexlocker).requestLockerResolution(seller, lexDAO, _token, deposit, _details, _singleArbiter);
+            lexlocker.transfer(escrowAddress.balance); //  presumably balance only holds the deposit amount if buyer is initiating dispute
+            return("Buyer has initiated Lexlocker dispute resolution.");
+            emit DealDisputed();
+        } else {
+            return("You are neither buyer nor seller.");
+        }
+  }
+
+  function readyToClose() public restricted returns(string memory){
+         if (msg.sender == seller) {
+            sellerApproved = true;
+            return("Seller is ready to close.");
+        } else if (msg.sender == buyer) {
+            buyerApproved = true;
+            return("Buyer is ready to close.");
+        } else {
+            return("You are neither buyer nor seller.");
+        }
+  }
+    
+  // check if both buyer and seller are ready to close and expiration has not been met; if so, close deal and pay seller
+  function closeDeal() public returns(bool){
+      require(sellerApproved && buyerApproved, "Parties are not ready to close.");
+      if (expirationTime <= uint256(block.timestamp)) {
+            isExpired = true;
+            buyer.transfer(escrowAddress.balance);
+            emit DealExpired();
+        } else {
+            isClosed = true;
+            seller.transfer(escrowAddress.balance);
+            emit DealClosed();
+        }
+        return(isClosed);
   }
 }
