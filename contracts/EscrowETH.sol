@@ -1,15 +1,13 @@
 //SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
-
-import "https://github.com/lexDAO/LexCorpus/blob/master/contracts/escrow/lexlocker/solidity/LexLocker.sol";
+pragma solidity 0.7.5;
 
 //FOR DEMONSTRATION ONLY, not recommended to be used for any purpose and provided with no warranty whatsoever
 /*@dev create a simple smart escrow contract for testing purposes, with ETH as payment and expiration denominated in seconds
 **intended to be deployed by buyer (as funds are placed in escrow upon deployment, and returned to deployer if expired) 
-**LexLocker arbitration integration in process*/
+**LexLocker arbitration integration in process (see https://github.com/lexDAO/LexCorpus/blob/master/contracts/escrow/lexlocker/solidity/LexLocker.sol)*/
 
-interface LexLocker { // LexLocker interface 
+interface LexLocker {
     function requestLockerResolution(address counterparty, address resolver, address token, uint256 sum, string calldata details, bool swiftResolver) external payable returns (uint256);
 }
 
@@ -24,8 +22,8 @@ contract EthEscrow {
   
   InEscrow[] public escrows;
   address escrowAddress = address(this);
-  address payable lexlocker = payable(0xD476595aa1737F5FdBfE9C8FEa17737679D9f89a);
-  address payable lexDAO = payable(0x01B92E2C0D06325089c6Fd53C98a214f5C75B2aC);
+  address payable lexlocker = payable(0xD476595aa1737F5FdBfE9C8FEa17737679D9f89a); //LexLocker contract address
+  address payable lexDAO = payable(0x01B92E2C0D06325089c6Fd53C98a214f5C75B2aC); //lexDAO address, used below as resolver 
   address payable buyer;
   address payable seller;
   uint256 deposit;
@@ -37,15 +35,13 @@ contract EthEscrow {
   bool isExpired;
   bool isClosed;
   string description;
-  //map whether an address is a party to the transaction for restricted() modifier 
-  mapping(address => bool) public parties;
+  mapping(address => bool) public parties; //map whether an address is a party to the transaction for restricted() modifier 
   
   event DealDisputed(address indexed sender, bool isDisputed);
   event DealExpired(bool isExpired);
   event DealClosed(bool isClosed);
   
-  //restricts to agent (creator of escrow contract) or internal calls
-  modifier restricted() {
+  modifier restricted() { //restricts to agent (creator of escrow contract) or internal calls
     require(parties[msg.sender], "This may only be called by a party to the deal or the escrow contract itself");
     _;
   }
