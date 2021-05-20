@@ -11,7 +11,7 @@ interface LexLocker {
     function requestLockerResolution(address counterparty, address resolver, address token, uint256 sum, string calldata details, bool swiftResolver) external payable returns (uint256);
 }
 
-contract EthEscrow {
+contract EscrowETH {
     
   //escrow struct to contain basic description of underlying deal, purchase price, ultimate recipient of funds
   struct InEscrow {
@@ -59,13 +59,10 @@ contract EthEscrow {
       parties[escrowAddress] = true;
       effectiveTime = uint256(block.timestamp);
       expirationTime = effectiveTime + _secsUntilExpiration;
-      isExpired = false;
-      sellerApproved = false;
-      buyerApproved = false;
       sendEscrow(description, deposit, seller);
   }
   
-  //buyer confirms seller's recipient oddress of escrowed funds as extra security measure
+  //buyer confirms seller's recipient address of escrowed funds as extra security measure
   function designateSeller(address payable _seller) public restricted {
       require(_seller != seller, "Party already designated as seller");
       require(_seller != buyer, "Buyer cannot also be seller");
