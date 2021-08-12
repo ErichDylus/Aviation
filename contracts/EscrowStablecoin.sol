@@ -1,18 +1,23 @@
 // SPDX-License-Identifier: MIT
 // ***** KOVAN VERSION *****
 
-pragma solidity ^0.6.0;
-
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.0.0/contracts/token/ERC20/ERC20.sol";
+pragma solidity ^0.8.0;
 
 //FOR KOVAN DEMONSTRATION ONLY, not recommended to be used for any purpose
 //@dev create a smart escrow contract for purposes of an aircraft sale transaction
 //buyer or agent (likely party to handle any meatspace filings) creates contract with submitted deposit, total purchase price, description, recipient of funds (seller or financier), days until expiry
 //other terms may be determined in offchain negotiations/documentation and memorialized by hash to IPFS or other decentralized file storage
 
+interface ERC20 { 
+    function approve(address spender, uint256 amount) external returns (bool); 
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function transferFrom(address from, address to, uint256 value) external returns (bool);
+}
+
 contract Escrow {
     
-  //escrow struct to contain basic description of underlying asset/deal, purchase price, ultimate recipient of funds, whether complete, number of parties
+  //escrow struct to contain description of underlying asset/deal (or IPFS hash to documents), purchase price, ultimate recipient of funds, whether complete, number of parties
   struct InEscrow {
       string description;
       uint256 price;
@@ -33,12 +38,12 @@ contract Escrow {
   uint256 deposit;
   uint256 approversCount;
   uint256 index;
-  uint256 effectiveTime;
   uint256 expirationTime;
   uint32 constant DAY_IN_SECONDS = 86400;
   bool isExpired;
   string description;
   string terminationReason;
+  ERC20 public erc20;
   //map whether an address is a party to the transaction and has authority for restricted modifier
   mapping(address => bool) public parties;
   mapping(address => bool) registeredAddresses;
@@ -46,7 +51,7 @@ contract Escrow {
   //events for when party approves closing, purchase price received in escrow, deal closes, deal terminated
   event ReadyToClose(address approver);
   event FundsInEscrow(address buyer);
-  event DealClosed();
+  event DealClosed(uint256 indexed index, uint256 effectiveTime);
   event DealTerminated(string terminationReason, bool isExpired);
   
   //restricts to agent (creator of escrow contract) or internal calls
@@ -58,12 +63,12 @@ contract Escrow {
   //creator of escrow contract is agent and contributes deposit-- could be third party agent/title co. or simply the buyer
   //initiate escrow with description, USD deposit amount, USD purchase price, unique deal index number, assign creator as agent, designate recipient (likely seller or financier), and term length
   //agent for purposes of this contract could be the entity handling meatspace filings (could be party to transaction or filing agent)
-  constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) public payable {
-      //approve Kovan USDC for full purchase price amount
-      ERC20(usdc).approve(msg.sender, price);
-      ERC20(usdc).approve(escrowAddress, price);
+  constructor(string memory _description, uint256 _deposit, uint256 _price, uint256 _index, address payable _creator, address payable _recipient, uint8 _daysUntilExpiration) payable {
+      erc20 = ERC20(usdc);
+      erc20.approve(msg.sender, price); //approve Kovan USDC for full purchase price amount, sender and contract
+      erc20.approve(escrowAddress, price); 
       // transfer deposit amount of USDC from the sender to escrow
-      ERC20(usdc).transferFrom(msg.sender, escrowAddress, deposit);
+      erc20.transferFrom(msg.sender, escrowAddress, deposit);
       agent = _creator;
       deposit = _deposit;
       price = _price;
@@ -74,8 +79,7 @@ contract Escrow {
       registeredAddresses[escrowAddress] = true;
       approversCount = 1;
       index = _index;
-      effectiveTime = block.timestamp;
-      expirationTime = effectiveTime + uint256(DAY_IN_SECONDS * uint32(_daysUntilExpiration));
+      expirationTime = block.timestamp + uint256(DAY_IN_SECONDS * uint32(_daysUntilExpiration));
       isExpired = false;
       sendEscrow(description, price, deposit, recipient);
   }
@@ -144,9 +148,9 @@ contract Escrow {
       require(!escrow.complete, "Deal already completed or terminated");
       checkIfExpired(_index);
       //transfer entire escrowed USDC balance to recipient 
-      ERC20(usdc).transferFrom(escrowAddress, recipient, ERC20(usdc).balanceOf(escrowAddress));
+      erc20.transferFrom(escrowAddress, recipient, erc20.balanceOf(escrowAddress));
       escrow.complete = true;
-      emit DealClosed();
+      emit DealClosed(index, block.timestamp);
   }
   
   //allows any party to check if expired (and if so, isExpired resolves true and will prevent closing)
@@ -168,10 +172,10 @@ contract Escrow {
       //NOTE: if buyer has sent remainder of purchase price, if agent terminates escrow the entire balance (including deposit) is remitted to buyer
       if (parties[buyer]) {
           buyer.transfer(escrowAddress.balance);
-          ERC20(usdc).transferFrom(escrowAddress, buyer, ERC20(usdc).balanceOf(escrowAddress));
+          erc20.transferFrom(escrowAddress, buyer, erc20.balanceOf(escrowAddress));
       } else {
           agent.transfer(escrowAddress.balance);
-          ERC20(usdc).transferFrom(escrowAddress, agent, ERC20(usdc).balanceOf(escrowAddress));
+          erc20.transferFrom(escrowAddress, agent, erc20.balanceOf(escrowAddress));
       } 
       escrow.complete = true;
       terminationReason = _terminationReason;
